@@ -67,7 +67,6 @@ let keyboardShortcut = 'enter';
 let uiScale = '100';
 let showGrid = true;
 let showScanlines = true;
-let selectedPerk = 'ockham';
 let bgmEnabled = true;
 
 // RPG Progression variables
@@ -95,6 +94,24 @@ const achievementsDef = [
     { id: 'ach_blind', title: 'Debate a Ciegas', desc: 'Derrota a un oponente con el HUD de vida invisible.', icon: '👁️' },
     { id: 'ach_level_5', title: 'Deidad del Logos', desc: 'Alcanza el nivel 5 de Debatiente.', icon: '⚡' }
 ];
+
+const skillNodesDef = {
+    log1: { id: 'log1', name: 'Ockham I', desc: 'La explicación más simple suele ser la correcta. Aumenta tu daño base en combate en un 10%.', cost: 1, req: null, branch: 'logic', icon: '🪒' },
+    log2: { id: 'log2', name: 'Ockham II', desc: 'Refinamiento lógico de tus premisas. Aumenta tu daño base en combate en un 20% (reemplaza Ockham I).', cost: 1, req: 'log1', branch: 'logic', icon: '📐' },
+    log3: { id: 'log3', name: 'Hombre de Hierro', desc: 'Síntesis constructiva de los argumentos del rival. Recuperas 5 de Credibilidad cada vez que infliges daño significativo.', cost: 2, req: 'log2', branch: 'logic', icon: '⛓️' },
+    
+    ret1: { id: 'ret1', name: 'Elocuencia I', desc: 'Léxico fluido. Reduce el daño por eco mental (palabras repetidas) en un 25%.', cost: 1, req: null, branch: 'rhetoric', icon: '💬' },
+    ret2: { id: 'ret2', name: 'Elocuencia II', desc: 'Dominio oratorio absoluto. Reduce el daño por eco mental en un 50% (reemplaza Elocuencia I).', cost: 1, req: 'ret1', branch: 'rhetoric', icon: '🗣️' },
+    ret3: { id: 'ret3', name: 'Reductio Absurdum', desc: 'Habilidad de llevar al oponente a contradicciones obvias. El rival recibe un 15% más de daño de todos tus ataques.', cost: 2, req: 'ret2', branch: 'rhetoric', icon: '🌀' },
+    
+    res1: { id: 'res1', name: 'Estoico I', desc: 'Control emocional ante falacias. Reduce todo el daño que recibes en combate en un 10%.', cost: 1, req: null, branch: 'defense', icon: '🛡️' },
+    res2: { id: 'res2', name: 'Estoico II', desc: 'Fortaleza dialéctica impenetrable. Reduce todo el daño que recibes en combate en un 20% (reemplaza Estoico I).', cost: 1, req: 'res1', branch: 'defense', icon: '🏰' },
+    res3: { id: 'res3', name: 'Mente Clara', desc: 'Lógica templada en momentos de prisa. Añade 10 segundos extra al temporizador en el Modo Blitz.', cost: 2, req: 'res2', branch: 'defense', icon: '⏳' }
+};
+
+let unlockedSkills = [];
+let selectedNodeId = null;
+
 
 
 
@@ -128,6 +145,12 @@ function loadProfile() {
         unlockedAchievements = JSON.parse(localStorage.getItem('axioma_achievements') || '[]');
     } catch(e) {
         unlockedAchievements = [];
+    }
+    
+    try {
+        unlockedSkills = JSON.parse(localStorage.getItem('axioma_skills') || '[]');
+    } catch(e) {
+        unlockedSkills = [];
     }
     
     const total = playerWins + playerLosses;
@@ -227,7 +250,234 @@ function loadProfile() {
         `;
         container.appendChild(card);
     });
+    updateSkillTreeUI();
 }
+
+function updateSkillTreeUI() {
+    const totalPointsEarned = playerLevel - 1;
+    let spentPoints = 0;
+    unlockedSkills.forEach(nodeId => {
+        const def = skillNodesDef[nodeId];
+        if (def) spentPoints += def.cost;
+    });
+    const availablePoints = Math.max(0, totalPointsEarned - spentPoints);
+    const availablePointsEl = document.getElementById('skill-points-available');
+    if (availablePointsEl) availablePointsEl.innerText = availablePoints;
+
+    document.querySelectorAll('.skill-node-card').forEach(card => {
+        const nodeId = card.dataset.node;
+        const def = skillNodesDef[nodeId];
+        if (!def) return;
+
+        card.classList.remove('locked', 'available', 'unlocked', 'selected-active');
+
+        if (selectedNodeId === nodeId) {
+            card.classList.add('selected-active');
+        }
+
+        if (unlockedSkills.includes(nodeId)) {
+            card.classList.add('unlocked');
+        } else {
+            const isReqMet = !def.req || unlockedSkills.includes(def.req);
+            if (isReqMet) {
+                card.classList.add('available');
+            } else {
+                card.classList.add('locked');
+            }
+        }
+    });
+
+    const panelIcon = document.getElementById('detail-node-icon');
+    const panelName = document.getElementById('detail-node-name');
+    const panelBranch = document.getElementById('detail-node-branch');
+    const panelCost = document.getElementById('detail-node-cost');
+    const panelDesc = document.getElementById('detail-node-desc');
+    const btnUnlock = document.getElementById('btn-unlock-node');
+
+    if (panelIcon && panelName && panelBranch && panelCost && panelDesc && btnUnlock) {
+        if (selectedNodeId) {
+            const def = skillNodesDef[selectedNodeId];
+            if (def) {
+                panelIcon.innerText = def.icon;
+                panelName.innerText = def.name;
+                
+                const branches = { logic: 'Rama de Lógica', rhetoric: 'Rama de Retórica', defense: 'Rama de Resistencia' };
+                panelBranch.innerText = branches[def.branch] || 'Rama Desconocida';
+                panelBranch.style.color = def.branch === 'logic' ? 'var(--accent-academico)' : (def.branch === 'rhetoric' ? 'var(--accent-politico)' : 'var(--accent-barrio)');
+                
+                panelCost.innerText = `COSTO: ${def.cost} PUNTO${def.cost > 1 ? 'S' : ''}`;
+                panelDesc.innerText = def.desc;
+
+                const isUnlocked = unlockedSkills.includes(selectedNodeId);
+                const isReqMet = !def.req || unlockedSkills.includes(def.req);
+                
+                if (isUnlocked) {
+                    btnUnlock.innerText = "Habilidad Adquirida";
+                    btnUnlock.disabled = true;
+                } else if (!isReqMet) {
+                    btnUnlock.innerText = "Bloqueado (Requiere nivel anterior)";
+                    btnUnlock.disabled = true;
+                } else if (availablePoints < def.cost) {
+                    btnUnlock.innerText = `Puntos Insuficientes (Requiere ${def.cost})`;
+                    btnUnlock.disabled = true;
+                } else {
+                    btnUnlock.innerText = `Adquirir Habilidad por ${def.cost} Punto${def.cost > 1 ? 's' : ''}`;
+                    btnUnlock.disabled = false;
+                }
+            }
+        } else {
+            panelIcon.innerText = '❓';
+            panelName.innerText = 'Selecciona una Habilidad';
+            panelBranch.innerText = 'Haz clic en cualquier nodo para ver sus detalles';
+            panelBranch.style.color = 'var(--text-muted)';
+            panelCost.innerText = 'COSTO: -';
+            panelDesc.innerText = 'Desbloquea habilidades en el árbol gastando tus puntos de Logos obtenidos al subir de nivel.';
+            btnUnlock.innerText = 'Adquirir Habilidad';
+            btnUnlock.disabled = true;
+        }
+    }
+}
+
+function updateActivePerksUI() {
+    const listContainer = document.getElementById('active-perks-list');
+    if (!listContainer) return;
+    
+    listContainer.innerHTML = '';
+    
+    const activePerks = [];
+    
+    // Check nodes and add to active list
+    if (unlockedSkills.includes('log2')) {
+        activePerks.push({ icon: '📐', name: 'Ockham II', desc: 'Refinamiento lógico de tus premisas. Aumenta tu daño base en combate en un 20%.' });
+    } else if (unlockedSkills.includes('log1')) {
+        activePerks.push({ icon: '🪒', name: 'Ockham I', desc: 'La explicación más simple suele ser la correcta. Aumenta tu daño base en combate en un 10%.' });
+    }
+    
+    if (unlockedSkills.includes('log3')) {
+        activePerks.push({ icon: '⛓️', name: 'Hombre de Hierro', desc: 'Síntesis constructiva. Recuperas 5 de Credibilidad cada vez que infliges daño significativo.' });
+    }
+    
+    if (unlockedSkills.includes('ret2')) {
+        activePerks.push({ icon: '🗣️', name: 'Elocuencia II', desc: 'Dominio oratorio absoluto. Reduce el daño por eco mental en un 50%.' });
+    } else if (unlockedSkills.includes('ret1')) {
+        activePerks.push({ icon: '💬', name: 'Elocuencia I', desc: 'Léxico fluido. Reduce el daño por eco mental en un 25%.' });
+    }
+    
+    if (unlockedSkills.includes('ret3')) {
+        activePerks.push({ icon: '🌀', name: 'Reductio Absurdum', desc: 'Llevar al rival al absurdo. El oponente recibe un 15% más de daño.' });
+    }
+    
+    if (unlockedSkills.includes('res2')) {
+        activePerks.push({ icon: '🏰', name: 'Estoico II', desc: 'Fortaleza dialéctica impenetrable. Reduce todo el daño recibido en un 20%.' });
+    } else if (unlockedSkills.includes('res1')) {
+        activePerks.push({ icon: '🛡️', name: 'Estoico I', desc: 'Control emocional ante falacias. Reduce todo el daño recibido en un 10%.' });
+    }
+    
+    if (unlockedSkills.includes('res3')) {
+        activePerks.push({ icon: '⏳', name: 'Mente Clara', desc: 'Lógica templada en prisa. Otorga +10 segundos en el Modo Blitz.' });
+    }
+    
+    if (activePerks.length === 0) {
+        listContainer.innerHTML = `
+            <div style="grid-column: span 3; text-align: center; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.72rem; padding: 20px; border: 1px dashed var(--border-dim); background: var(--bg-void);">
+                NINGUNA VENTAJA ACTIVA.<br>DESBLOQUEA HABILIDADES EN LA SECCIÓN "PERFIL Y LOGROS" GASTANDO PUNTOS DE LOGOS.
+            </div>
+        `;
+    } else {
+        activePerks.forEach(perk => {
+            const card = document.createElement('div');
+            card.className = 'perk-card selected';
+            card.style.cursor = 'default';
+            card.innerHTML = `
+                <div class="perk-icon-box">${perk.icon}</div>
+                <div class="perk-info">
+                    <span class="perk-name">${perk.name}</span>
+                    <span class="perk-desc">${perk.desc}</span>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+    }
+}
+
+function initSkillTree() {
+    // Listeners de Pestañas del Perfil
+    document.querySelectorAll('.profile-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.profile-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.add('hidden'));
+            
+            btn.classList.add('active');
+            const tabId = `profile-tab-${btn.dataset.tab}`;
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) targetContent.classList.remove('hidden');
+            playSound('click');
+        });
+    });
+
+    // Listeners de los Nodos del Árbol de Habilidades
+    document.querySelectorAll('.skill-node-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const nodeId = card.dataset.node;
+            const def = skillNodesDef[nodeId];
+            if (!def) return;
+            
+            const isReqMet = !def.req || unlockedSkills.includes(def.req);
+            const isUnlocked = unlockedSkills.includes(nodeId);
+            
+            if (isReqMet || isUnlocked) {
+                selectedNodeId = nodeId;
+                playSound('click');
+                updateSkillTreeUI();
+            }
+        });
+    });
+
+    // Botón para adquirir nodo
+    const btnUnlockNode = document.getElementById('btn-unlock-node');
+    if (btnUnlockNode) {
+        btnUnlockNode.addEventListener('click', () => {
+            if (!selectedNodeId) return;
+            const def = skillNodesDef[selectedNodeId];
+            if (!def) return;
+            
+            const totalPointsEarned = playerLevel - 1;
+            let spentPoints = 0;
+            unlockedSkills.forEach(id => {
+                const node = skillNodesDef[id];
+                if (node) spentPoints += node.cost;
+            });
+            const availablePoints = Math.max(0, totalPointsEarned - spentPoints);
+            
+            const isUnlocked = unlockedSkills.includes(selectedNodeId);
+            const isReqMet = !def.req || unlockedSkills.includes(def.req);
+            
+            if (!isUnlocked && isReqMet && availablePoints >= def.cost) {
+                unlockedSkills.push(selectedNodeId);
+                saveProfile();
+                playSound('success');
+                updateSkillTreeUI();
+            }
+        });
+    }
+
+    // Botón para restablecer el árbol
+    const btnResetSkills = document.getElementById('btn-reset-skills');
+    if (btnResetSkills) {
+        btnResetSkills.addEventListener('click', () => {
+            if (unlockedSkills.length === 0) return;
+            
+            if (confirm('¿Estás seguro de que quieres restablecer todo tu árbol de habilidades? Recuperarás todos tus puntos.')) {
+                unlockedSkills = [];
+                selectedNodeId = null;
+                saveProfile();
+                playSound('click');
+                updateSkillTreeUI();
+            }
+        });
+    }
+}
+
 
 function saveProfile() {
     localStorage.setItem('axioma_wins', playerWins);
@@ -398,10 +648,19 @@ function showBattleSummary(isWin) {
     document.getElementById('summary-game-mode').innerText = modeText;
     
     let perkText = "Ninguna";
-    if (selectedPerk === 'ockham') perkText = "Navaja de Ockham";
-    else if (selectedPerk === 'estoico') perkText = "Escudo Estoico";
-    else if (selectedPerk === 'claridad') perkText = "Mente Clara";
-    else if (selectedPerk === 'elocuencia') perkText = "Elocuencia Pura";
+    if (unlockedSkills.length > 0) {
+        const activeNames = [];
+        if (unlockedSkills.includes('log2')) activeNames.push('Ockham II');
+        else if (unlockedSkills.includes('log1')) activeNames.push('Ockham I');
+        if (unlockedSkills.includes('log3')) activeNames.push('Hombre de Hierro');
+        if (unlockedSkills.includes('ret2')) activeNames.push('Elocuencia II');
+        else if (unlockedSkills.includes('ret1')) activeNames.push('Elocuencia I');
+        if (unlockedSkills.includes('ret3')) activeNames.push('Reductio Absurdum');
+        if (unlockedSkills.includes('res2')) activeNames.push('Estoico II');
+        else if (unlockedSkills.includes('res1')) activeNames.push('Estoico I');
+        if (unlockedSkills.includes('res3')) activeNames.push('Mente Clara');
+        perkText = activeNames.join(', ');
+    }
     document.getElementById('summary-perk-name').innerText = perkText;
     
     document.getElementById('summary-xp-gained').innerText = isWin ? "+35 XP" : "+10 XP";
@@ -721,19 +980,12 @@ document.getElementById('btn-save-keys').addEventListener('click', () => {
     setTimeout(() => status.innerText = "", 3000);
 });
 
-// Perk cards selection
-perkCards.forEach(card => {
-    card.addEventListener('click', () => {
-        perkCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        selectedPerk = card.dataset.perk;
-    });
-});
+// Initialize Skill Tree and load settings
+initSkillTree();
+loadAllSettings();
 
 argumentInput.addEventListener('input', playTypeSound);
 topicInput.addEventListener('input', playTypeSound);
-
-loadAllSettings();
 
 function initBossAvatars() {
     Object.keys(oponentes).forEach(bossKey => {
@@ -857,6 +1109,9 @@ document.getElementById('input-groq').addEventListener('input', () => {
 
 
 function showScreen(targetName) {
+    if (targetName === 'thesis') {
+        updateActivePerksUI();
+    }
     Object.values(screens).forEach(s => { s.classList.remove('visible'); s.classList.add('hidden'); });
     screens[targetName].classList.remove('hidden'); void screens[targetName].offsetWidth; screens[targetName].classList.add('visible');
 }
@@ -1059,7 +1314,7 @@ function startSilenceTimer() {
     clearInterval(silencioTimer);
     silencioTimer = setInterval(() => {
         if (playerHP > 0 && aiHP > 0 && !isAiThinking) {
-            let silenceDmg = selectedPerk === 'estoico' ? 1 : 2;
+            let silenceDmg = unlockedSkills.includes('res2') ? 1 : (unlockedSkills.includes('res1') ? 1.5 : 2);
             playerHP -= silenceDmg;
             updateHealth();
             if (playerHP <= 0) {
@@ -1231,14 +1486,14 @@ function updateHealth() {
 
 function startBlitzTimer() {
     clearInterval(blitzTimer); 
-    blitzTimeLeft = selectedPerk === 'claridad' ? 40 : 30;
+    blitzTimeLeft = unlockedSkills.includes('res3') ? 40 : 30;
     attackBtn.innerText = `Atacar (${blitzTimeLeft}s)`;
     blitzTimer = setInterval(() => {
         blitzTimeLeft--;
         attackBtn.innerText = `Atacar (${blitzTimeLeft}s)`;
         if (blitzTimeLeft <= 0) {
             clearInterval(blitzTimer);
-            let blitzDmg = selectedPerk === 'estoico' ? 16 : 20;
+            let blitzDmg = unlockedSkills.includes('res2') ? 16 : (unlockedSkills.includes('res1') ? 18 : 20);
             playerHP -= blitzDmg;
             addMessage('system', `[ BLITZ ] Tiempo agotado. Daño por silencio: ${blitzDmg}`, () => {
                 triggerDamageFlash(); updateHealth();
@@ -1267,8 +1522,10 @@ async function attackAI(playerText) {
             const ratio = repeated.length / currentWords.length;
             if (ratio >= 0.3) {
                 ecoDamage = Math.round(ratio * 30);
-                if (selectedPerk === 'elocuencia') {
+                if (unlockedSkills.includes('ret2')) {
                     ecoDamage = Math.round(ecoDamage * 0.5);
+                } else if (unlockedSkills.includes('ret1')) {
+                    ecoDamage = Math.round(ecoDamage * 0.75);
                 }
             }
         }
@@ -1331,8 +1588,21 @@ async function attackAI(playerText) {
         const result = JSON.parse(responseText.replace(/```json/g, '').replace(/```/g, '').trim());
 
         let finalDmgRecibido = result.daño_recibido;
-        if (selectedPerk === 'ockham') {
+        if (unlockedSkills.includes('log2')) {
             finalDmgRecibido = Math.round(finalDmgRecibido * 1.2);
+        } else if (unlockedSkills.includes('log1')) {
+            finalDmgRecibido = Math.round(finalDmgRecibido * 1.1);
+        }
+
+        if (unlockedSkills.includes('ret3')) {
+            finalDmgRecibido = Math.round(finalDmgRecibido * 1.15);
+        }
+
+        // Hombre de Hierro (log3)
+        if (unlockedSkills.includes('log3') && finalDmgRecibido > 10) {
+            const healAmt = 5;
+            playerHP = Math.min(100, playerHP + healAmt);
+            addMessage('system', `[ HOMBRE DE HIERRO ] +${healAmt} Credibilidad (Sinergia de Síntesis)`);
         }
 
         if (gameRule === 'sudden_death') {
@@ -1347,8 +1617,10 @@ async function attackAI(playerText) {
                 setTimeout(() => {
                     addMessage('ai', result.respuesta_ia, () => {
                         let finalDmgInfligido = result.daño_infligido;
-                        if (selectedPerk === 'estoico') {
+                        if (unlockedSkills.includes('res2')) {
                             finalDmgInfligido = Math.round(finalDmgInfligido * 0.8);
+                        } else if (unlockedSkills.includes('res1')) {
+                            finalDmgInfligido = Math.round(finalDmgInfligido * 0.9);
                         }
                         
                         if (gameRule !== 'sudden_death') playerHP -= finalDmgInfligido;

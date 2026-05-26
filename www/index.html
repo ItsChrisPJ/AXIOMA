@@ -1219,6 +1219,143 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Estilos de las Pestañas de Perfil */
+        .profile-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-dim);
+            margin-bottom: 24px;
+            gap: 4px;
+        }
+        .profile-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            border-bottom: none;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: relative;
+        }
+        .profile-tab-btn:hover {
+            color: var(--text-primary);
+        }
+        .profile-tab-btn.active {
+            color: var(--text-primary);
+            border-color: var(--border-dim);
+            background: var(--bg-surface);
+        }
+        .profile-tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--bg-surface);
+        }
+        .profile-tab-content.hidden {
+            display: none !important;
+        }
+
+        /* Árbol de Habilidades */
+        .skill-node-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            position: relative;
+            user-select: none;
+        }
+        .skill-node-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--text-muted);
+            opacity: 0.3;
+        }
+        
+        /* Estados de los Nodos */
+        .skill-node-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .skill-node-card.available {
+            opacity: 1;
+            border-color: var(--border-mid);
+            cursor: pointer;
+        }
+        .skill-node-card.available:hover {
+            background: var(--bg-raised);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+        }
+        .skill-node-card.unlocked {
+            opacity: 1;
+            background: var(--bg-raised);
+            cursor: pointer;
+        }
+        .skill-node-card.selected-active {
+            outline: 1px solid var(--text-primary);
+        }
+        
+        /* Colorear ramas según tipo */
+        #branch-logic .skill-node-card.available::before { background: var(--accent-academico); }
+        #branch-logic .skill-node-card.unlocked {
+            border-color: var(--accent-academico);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.2), inset 0 0 10px rgba(6, 182, 212, 0.05);
+        }
+        #branch-logic .skill-node-card.unlocked::before {
+            background: var(--accent-academico);
+            opacity: 1;
+        }
+
+        #branch-rhetoric .skill-node-card.available::before { background: var(--accent-politico); }
+        #branch-rhetoric .skill-node-card.unlocked {
+            border-color: var(--accent-politico);
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.2), inset 0 0 10px rgba(168, 85, 247, 0.05);
+        }
+        #branch-rhetoric .skill-node-card.unlocked::before {
+            background: var(--accent-politico);
+            opacity: 1;
+        }
+
+        #branch-defense .skill-node-card.available::before { background: var(--accent-barrio); }
+        #branch-defense .skill-node-card.unlocked {
+            border-color: var(--accent-barrio);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.2), inset 0 0 10px rgba(239, 68, 68, 0.05);
+        }
+        #branch-defense .skill-node-card.unlocked::before {
+            background: var(--accent-barrio);
+            opacity: 1;
+        }
+
+        @media (max-width: 600px) {
+            .profile-tabs {
+                margin-bottom: 15px;
+            }
+            .skill-tree-layout {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+            .skill-tree-header {
+                padding: 10px !important;
+                gap: 8px !important;
+            }
+            .skill-node-card {
+                padding: 10px !important;
+            }
+            .skill-node-detail {
+                padding: 12px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1413,7 +1550,14 @@
             <button class="back-btn back-to-menu">← Volver</button>
             <div class="setup-title">PERFIL DEL DEBATIENTE</div>
         </div>
-        <div class="profile-container">
+        
+        <div class="profile-tabs">
+            <button class="profile-tab-btn active" data-tab="info">INFORMACIÓN</button>
+            <button class="profile-tab-btn" data-tab="skills">HABILIDADES</button>
+        </div>
+
+        <div class="profile-tab-content" id="profile-tab-info">
+            <div class="profile-container">
             <div class="profile-layout">
                 <!-- Columna Izquierda: Vista Previa y Logros -->
                 <div class="profile-preview-panel">
@@ -1514,6 +1658,148 @@
                     <button class="btn-large" id="btn-save-profile" style="margin-top: auto;">Guardar Cambios</button>
                     <div class="status-msg" id="profile-status"></div>
                 </div>
+            </div>
+        </div>
+        </div> <!-- Fin de profile-tab-info -->
+
+        <!-- TAB CONTENT: HABILIDADES (SKILL TREE) -->
+        <div class="profile-tab-content hidden" id="profile-tab-skills" style="width: 100%; max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+            <div class="skill-tree-header" style="background: var(--bg-surface); border: 1px solid var(--border-dim); padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span class="section-label" style="margin: 0;">// PUNTOS DE LOGOS DISPONIBLES</span>
+                    <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: bold; color: var(--accent-normal);">
+                        <span id="skill-points-available">0</span> PUNTOS
+                    </div>
+                </div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.4;">
+                    Obtienes 1 punto por nivel. Úsalos para adquirir ventajas pasivas.
+                </div>
+                <button class="back-btn" id="btn-reset-skills" style="border-color: var(--accent-barrio); color: var(--accent-barrio); padding: 8px 16px; font-size: 0.75rem;">Restablecer Árbol</button>
+            </div>
+
+            <div class="skill-tree-layout" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <!-- Rama Lógica -->
+                <div class="skill-branch" id="branch-logic" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="branch-title" style="color: var(--accent-academico); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: bold; text-align: center; border-bottom: 1px solid var(--border-dim); padding-bottom: 8px;">// Rama de Lógica</div>
+                    
+                    <div class="skill-node-card locked" data-node="log1">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">🪒</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Ockham I</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 1 (Costo: 1)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-node-card locked" data-node="log2">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">📐</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Ockham II</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 2 (Costo: 1)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-node-card locked" data-node="log3">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">⛓️</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Hombre de Hierro</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 3 (Costo: 2)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rama Retórica -->
+                <div class="skill-branch" id="branch-rhetoric" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="branch-title" style="color: var(--accent-politico); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: bold; text-align: center; border-bottom: 1px solid var(--border-dim); padding-bottom: 8px;">// Rama de Retórica</div>
+                    
+                    <div class="skill-node-card locked" data-node="ret1">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">💬</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Elocuencia I</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 1 (Costo: 1)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-node-card locked" data-node="ret2">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">🗣️</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Elocuencia II</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 2 (Costo: 1)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-node-card locked" data-node="ret3">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">🌀</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Reductio Absurdum</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 3 (Costo: 2)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rama Resistencia -->
+                <div class="skill-branch" id="branch-defense" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="branch-title" style="color: var(--accent-barrio); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: bold; text-align: center; border-bottom: 1px solid var(--border-dim); padding-bottom: 8px;">// Rama de Resistencia</div>
+                    
+                    <div class="skill-node-card locked" data-node="res1">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">🛡️</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Estoico I</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 1 (Costo: 1)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-node-card locked" data-node="res2">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">🏰</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Estoico II</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 2 (Costo: 1)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-node-card locked" data-node="res3">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="node-icon" style="font-size: 1.4rem;">⏳</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="node-name" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Mente Clara</span>
+                                <span class="node-level" style="font-size: 0.55rem; color: var(--text-muted);">Nivel 3 (Costo: 2)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalles del Nodo -->
+            <div class="skill-node-detail" id="node-detail-panel" style="background: var(--bg-surface); border: 1px solid var(--border-dim); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-dim); padding-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span id="detail-node-icon" style="font-size: 1.8rem;">❓</span>
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <span id="detail-node-name" style="font-family: var(--font-mono); font-size: 1rem; font-weight: bold; text-transform: uppercase;">Selecciona una Habilidad</span>
+                            <span id="detail-node-branch" style="font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);">Haz clic en cualquier nodo para ver sus detalles</span>
+                        </div>
+                    </div>
+                    <div id="detail-node-cost" style="font-family: var(--font-mono); font-size: 0.8rem; border: 1px solid var(--border-dim); padding: 4px 10px; background: var(--bg-void);">COSTO: -</div>
+                </div>
+                <div id="detail-node-desc" style="font-size: 0.8rem; line-height: 1.5; color: var(--text-muted); min-height: 40px;">
+                    Desbloquea habilidades en el árbol gastando tus puntos de Logos obtenidos al subir de nivel.
+                </div>
+                <button class="btn-large" id="btn-unlock-node" disabled style="font-size: 1.1rem; padding: 10px; height: auto; animation: none;">Adquirir Habilidad</button>
             </div>
         </div>
     </div>
@@ -1696,36 +1982,9 @@
             <div class="section-label" id="thesis-subtitle">// 01 — DEFINE TU TESIS DE APERTURA</div>
             <textarea id="topic-input" placeholder="Ej: La automatización extrema beneficiará a la humanidad a largo plazo..." style="height: 70px; resize: none; margin-bottom: 5px;"></textarea>
             
-            <div class="section-label">// 02 — SELECCIONA TU VENTAJA MENTAL (PERK)</div>
-            <div class="perk-grid">
-                <div class="perk-card selected" data-perk="ockham">
-                    <div class="perk-icon-box">🪒</div>
-                    <div class="perk-info">
-                        <span class="perk-name">Navaja de Ockham</span>
-                        <span class="perk-desc">La explicación más simple suele ser la correcta. Aumenta tu daño infligido en un 20%.</span>
-                    </div>
-                </div>
-                <div class="perk-card" data-perk="estoico">
-                    <div class="perk-icon-box">🛡️</div>
-                    <div class="perk-info">
-                        <span class="perk-name">Escudo Estoico</span>
-                        <span class="perk-desc">Controla tus emociones. Reduce todo el daño que recibes en combate, Blitz y Silencio en un 20%.</span>
-                    </div>
-                </div>
-                <div class="perk-card" data-perk="claridad">
-                    <div class="perk-icon-box">⏳</div>
-                    <div class="perk-info">
-                        <span class="perk-name">Mente Clara</span>
-                        <span class="perk-desc">Lógica serena bajo presión. Otorga +10 segundos adicionales en el temporizador del Modo Blitz.</span>
-                    </div>
-                </div>
-                <div class="perk-card" data-perk="elocuencia">
-                    <div class="perk-icon-box">💬</div>
-                    <div class="perk-info">
-                        <span class="perk-name">Elocuencia Pura</span>
-                        <span class="perk-desc">Léxico amplio. Reduce el daño por repetición de palabras en Modo Eco Mental en un 50%.</span>
-                    </div>
-                </div>
+            <div class="section-label" id="perks-section-label">// 02 — VENTAJAS MENTALES ACTIVAS (DEL ÁRBOL DE HABILIDADES)</div>
+            <div class="perk-grid" id="active-perks-list">
+                <!-- Se cargan dinámicamente en base al árbol de talentos -->
             </div>
             
             <button class="btn-large" id="start-battle-btn" disabled style="margin-top: 15px;">⚔ Entrar al Cuadrilátero</button>
