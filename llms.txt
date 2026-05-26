@@ -1,0 +1,37 @@
+# AXIOMA — Arquitectura Modular ES6
+
+Este archivo mapea la estructura de archivos modular de AXIOMA y documenta las responsabilidades y firmas públicas clave para anclaje de contexto de LLMs en futuras sesiones.
+
+---
+
+## 1. Mapeo de Módulos y Responsabilidades
+
+### `data/bosses.js`
+- **Responsabilidad**: Almacenar datos estáticos y prompts del sistema.
+- **Exportaciones**:
+  - `oponentes` (Object): Diccionario que contiene las configuraciones (nombre, API, prompt) de los 16 contrincantes del juego.
+  - `inquisidorTopics` (Array<String>): Lista de tesis polémicas seleccionadas aleatoriamente para el Modo Inquisidor.
+
+### `multimedia/audio.js`
+- **Responsabilidad**: Encapsular la Web Audio API para síntesis en tiempo real, efectos sonoros (SFX) y música synthwave generativa.
+- **Variables de Estado Interno**: `audioCtx`, `bgmInterval`, `bgmOscs`, `bgmPlaying`, `soundEnabled`, `bgmEnabled`, `masterVolume`.
+- **Exportaciones**:
+  - `initAudio()`: Inicializa o reanuda de manera segura el `AudioContext`.
+  - `configureAudio(settings)`: Sincroniza configuraciones locales (`soundEnabled`, `bgmEnabled`, `masterVolume`) y arranca o detiene la música de forma dinámica.
+  - `playSound(type)`: Sintetiza sonidos de clic, beeps de UI, daño, éxito, victoria, derrota y alarmas de credibilidad baja.
+  - `playTypeSound()`: Sintetiza sonidos rápidos e interactivos de teclado mecánico para el efecto typewriter.
+  - `startBGM()`: Dispara el arpegiador y acordes progresivos del sintetizador continuo en Do menor/Mi bemol/Si bemol/La bemol.
+  - `stopBGM()`: Limpia e interrumpe de inmediato todos los osciladores activos de la música de fondo.
+
+---
+
+## 2. Puntos de Entrada y Configuración de Sistema
+
+- **`index.html`**: Punto de entrada de la interfaz gráfica del juego. Carga la lógica de inicialización general importando `renderer.js` como un script de tipo módulo:
+  ```html
+  <script type="module" src="renderer.js"></script>
+  ```
+- **`package.json`**: Script de ejecución principal adaptado para Wayland en Linux y aceleración por GPU por defecto en escritorios modernos:
+  ```json
+  "start": "NIXOS_OZONE_WL=1 ELECTRON_OZONE_PLATFORM_HINT=wayland electron ."
+  ```

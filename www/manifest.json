@@ -1,0 +1,24 @@
+{
+  "name": "AXIOMA: Arena de Falacias",
+  "short_name": "Axioma",
+  "description": "Un juego de debate interactivo donde te enfrentas a falacias lógicas con ayuda de inteligencia artificial.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./app_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

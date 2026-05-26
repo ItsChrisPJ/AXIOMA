@@ -1,0 +1,15 @@
+{
+  "name": "axioma",
+  "version": "1.0.0",
+  "description": "Arena de Debate",
+  "main": "main.js",
+  "scripts": {
+    "start": "NIXOS_OZONE_WL=1 ELECTRON_OZONE_PLATFORM_HINT=wayland electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^22.3.27"
+  }
+}

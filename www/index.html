@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Axioma - Arena de Debate</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        /* =========================================================
+           TOKENS GLOBALES
+        ========================================================= */
+        :root {
+            --bg-void:      #070b14;
+            --bg-surface:   #0d1425;
+            --bg-raised:    #131d35;
+            --border-dim:   #1e2d4a;
+            --border-mid:   #253656;
+            --text-primary: #e8edf5;
+            --text-muted:   #5a7099;
+            --text-ghost:   #2e4266;
+
+            --accent-normal:    #10b981;
+            --accent-politico:  #7c3aed;
+            --accent-academico: #0e7490;
+            --accent-barrio:    #b91c1c;
+            --accent-troll:     #ec4899;
+            --accent-conspira:  #eab308;
+            --accent-abogado:   #f59e0b;
+            --accent-nihilista: #71717a;
+            --accent-dogmatico: #d97706;
+            --accent-maquina:   #ffffff;
+            --accent-socratico: #06b6d4;
+            --accent-karen:     #db2777;
+            --accent-guru:      #a855f7;
+            --accent-sofista:    #10b981;
+            --accent-influencer: #f43f5e;
+            --accent-ejecutivo:  #4f46e5;
+
+            --hp-player: #3b82f6;
+            --hp-ai:     #ef4444;
+
+            --font-display: 'Bebas Neue', sans-serif;
+            --font-mono:    'Space Mono', monospace;
+            --transition-scene: 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        html { font-size: 18px; }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { background-color: var(--bg-void); color: var(--text-primary); font-family: var(--font-mono); height: 100vh; overflow: hidden; position: relative; }
+        body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+        body::after { content: ''; position: fixed; inset: 0; background-size: 50px 50px; background-image: linear-gradient(to right, rgba(30, 45, 74, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 45, 74, 0.15) 1px, transparent 1px); pointer-events: none; z-index: 0; }
+
+        .screen { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 28px; transition: opacity var(--transition-scene), transform var(--transition-scene); z-index: 1; }
+        .screen.hidden { opacity: 0; pointer-events: none; transform: scale(0.97); }
+        .screen.visible { opacity: 1; pointer-events: all; transform: scale(1); }
+
+        .setup-header { display: flex; align-items: center; gap: 20px; margin-bottom: 36px; animation: fadeUp 0.5s 0s both; }
+        .back-btn { background: transparent; border: 1px solid var(--border-dim); color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.15em; padding: 8px 14px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+        .back-btn:hover { border-color: var(--border-mid); color: var(--text-primary); }
+        .setup-title { font-family: var(--font-display); font-size: 2.2rem; letter-spacing: 0.1em; color: var(--text-primary); }
+        .section-label { font-size: 0.65rem; letter-spacing: 0.35em; color: var(--text-ghost); text-transform: uppercase; margin-bottom: 14px; }
+
+        /* Menú y Ajustes */
+        #menu-screen { align-items: center; justify-content: center; gap: 0; }
+        .menu-eyebrow { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.4em; color: var(--text-ghost); text-transform: uppercase; margin-bottom: 12px; animation: fadeUp 0.6s 0.1s both; }
+        .menu-title { font-family: var(--font-display); font-size: clamp(6rem, 16vw, 11rem); line-height: 0.88; letter-spacing: 0.05em; color: var(--text-primary); position: relative; animation: fadeUp 0.7s 0.2s both; }
+        .menu-title::after { content: 'AXIOMA'; position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 1px rgba(99, 102, 241, 0.25); clip-path: polygon(0 45%, 100% 45%, 100% 55%, 0 55%); transform: translateX(3px); animation: glitch 4s infinite; }
+        .menu-divider { width: 60px; height: 2px; background: linear-gradient(90deg, var(--accent-politico), transparent); margin: 24px 0; animation: fadeUp 0.7s 0.3s both; }
+        .menu-tagline { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 52px; animation: fadeUp 0.7s 0.35s both; }
+        .menu-nav { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; animation: fadeUp 0.7s 0.45s both; }
+        .menu-btn { background: transparent; border: 1px solid var(--border-dim); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 16px 28px; text-align: left; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
+        .menu-btn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent-politico); transform: scaleY(0); transition: transform 0.2s ease; transform-origin: bottom; }
+        .menu-btn:hover:not(:disabled) { background: var(--bg-raised); border-color: var(--border-mid); padding-left: 36px; }
+        .menu-btn:hover:not(:disabled)::before { transform: scaleY(1); }
+        .menu-version { position: absolute; bottom: 22px; right: 28px; font-size: 0.62rem; letter-spacing: 0.2em; color: var(--text-ghost); animation: fadeUp 0.7s 0.6s both; }
+
+        #settings-screen { justify-content: flex-start; }
+        .settings-container { max-width: 650px; width: 100%; margin: 0 auto; margin-top: 30px; animation: fadeUp 0.5s 0.1s both; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.1em; }
+        .api-input { width: 100%; background: var(--bg-surface); border: 1px solid var(--border-dim); color: var(--text-primary); font-family: var(--font-mono); padding: 14px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+        .api-input:focus { border-color: var(--border-mid); }
+        .status-msg { font-size: 0.75rem; margin-top: 15px; text-align: center; color: var(--accent-normal); min-height: 20px; letter-spacing: 0.1em; text-transform: uppercase; }
+        .btn-large { width: 100%; background: transparent; border: 1px solid var(--border-dim); color: var(--text-muted); font-family: var(--font-display); font-size: 1.6rem; letter-spacing: 0.2em; padding: 16px; cursor: pointer; transition: all 0.25s ease; text-transform: uppercase; animation: fadeUp 0.5s 0.3s both; }
+        .btn-large:hover:not(:disabled) { background: var(--bg-raised); border-color: var(--border-mid); color: var(--text-primary); letter-spacing: 0.3em; }
+        .btn-large:disabled { cursor: not-allowed; opacity: 0.5; }
+
+        /* Estilos de las Pestañas de Configuración */
+        .settings-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-dim);
+            margin-bottom: 24px;
+            gap: 4px;
+        }
+        .settings-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            border-bottom: none;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 10px 20px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.2s;
+        }
+        .settings-tab-btn:hover {
+            color: var(--text-primary);
+        }
+        .settings-tab-btn.active {
+            color: var(--text-primary);
+            border-color: var(--border-dim);
+            background: var(--bg-surface);
+            position: relative;
+        }
+        .settings-tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--bg-surface);
+        }
+        .settings-tab-content {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 24px;
+            min-height: 280px;
+            margin-bottom: 24px;
+        }
+        .settings-tab-content.hidden {
+            display: none;
+        }
+
+        /* Configuración de Entrada Selectores */
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(30, 45, 74, 0.4);
+        }
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+        .setting-label-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .setting-title {
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .setting-desc {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        /* Toggles / Sliders de volumen */
+        .settings-select {
+            background: var(--bg-void);
+            border: 1px solid var(--border-dim);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .settings-select:focus {
+            border-color: var(--border-mid);
+        }
+        
+        /* Custom Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: var(--bg-void);
+            border: 1px solid var(--border-dim);
+            transition: .2s;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-muted);
+            transition: .2s;
+        }
+        input:checked + .slider {
+            border-color: var(--accent-politico);
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: var(--accent-normal);
+            box-shadow: 0 0 8px var(--accent-normal);
+        }
+        
+        /* Volume Range Slider */
+        .volume-slider {
+            -webkit-appearance: none;
+            width: 150px;
+            height: 6px;
+            background: var(--bg-void);
+            border: 1px solid var(--border-dim);
+            outline: none;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent-politico);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-politico);
+        }
+
+        /* Keyboard options (Radio groups) */
+        .keyboard-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+        .keyboard-option input {
+            accent-color: var(--accent-politico);
+            cursor: pointer;
+        }
+
+        /* Grid / Scanline hide toggles */
+        body.no-grid::after {
+            display: none !important;
+        }
+        .scanline.hidden {
+            display: none !important;
+        }
+
+        .test-key-btn {
+            background: transparent;
+            border: 1px solid var(--border-dim);
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 0 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .test-key-btn:hover:not(:disabled) {
+            border-color: var(--border-mid);
+            color: var(--text-primary);
+            background: var(--bg-raised);
+        }
+        .test-key-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .test-result-msg {
+            font-size: 0.72rem;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            min-height: 16px;
+        }
+        .test-result-msg.success {
+            color: var(--accent-normal);
+        }
+        .test-result-msg.error {
+            color: var(--accent-barrio);
+        }
+
+        /* Pantallas de Selección */
+        #mode-screen, #boss-screen, #thesis-screen, #profile-screen, #settings-screen { justify-content: flex-start; overflow-y: auto; }
+        #mode-screen::-webkit-scrollbar, #boss-screen::-webkit-scrollbar { width: 6px; }
+        #mode-screen::-webkit-scrollbar-thumb, #boss-screen::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 4px; }
+
+        .boss-grid { display: grid; gap: 14px; margin-bottom: 32px; animation: fadeUp 0.5s 0.1s both; }
+        .boss-grid.modes { grid-template-columns: repeat(3, 1fr); max-width: 900px; margin: 0 auto; }
+        .boss-grid.bosses { grid-template-columns: repeat(3, 1fr); padding-bottom: 20px; }
+
+        .boss-card { background: var(--bg-surface); border: 1px solid var(--border-dim); padding: 24px 18px; cursor: pointer; transition: all 0.22s ease; position: relative; overflow: hidden; text-align: left; }
+        .boss-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; transition: opacity 0.2s; opacity: 0.3; }
+        
+        .boss-card[data-boss="normal"]::before    { background: var(--accent-normal); }
+        .boss-card[data-boss="politico"]::before  { background: var(--accent-politico); }
+        .boss-card[data-boss="academico"]::before { background: var(--accent-academico); }
+        .boss-card[data-boss="barrio"]::before    { background: var(--accent-barrio); }
+        .boss-card[data-boss="troll"]::before     { background: var(--accent-troll); }
+        .boss-card[data-boss="conspira"]::before  { background: var(--accent-conspira); }
+        .boss-card[data-boss="abogado"]::before   { background: var(--accent-abogado); }
+        .boss-card[data-boss="nihilista"]::before { background: var(--accent-nihilista); }
+        .boss-card[data-boss="dogmatico"]::before { background: var(--accent-dogmatico); }
+        .boss-card[data-boss="maquina"]::before   { background: var(--accent-maquina); }
+        .boss-card[data-boss="socratico"]::before  { background: var(--accent-socratico); }
+        .boss-card[data-boss="karen"]::before      { background: var(--accent-karen); }
+        .boss-card[data-boss="guru"]::before       { background: var(--accent-guru); }
+        .boss-card[data-boss="sofista"]::before    { background: var(--accent-sofista); }
+        .boss-card[data-boss="influencer"]::before { background: var(--accent-influencer); }
+        .boss-card[data-boss="ejecutivo"]::before  { background: var(--accent-ejecutivo); }
+
+        .boss-card[data-rule="standard"][data-flow="boss"]::before { background: var(--accent-politico); }
+        .boss-card[data-rule="blitz"]::before { background: var(--accent-conspira); }
+        .boss-card[data-rule="inquisidor"]::before { background: var(--accent-academico); }
+        .boss-card[data-rule="sudden_death"]::before { background: var(--accent-barrio); }
+        .boss-card[data-rule="gauntlet"]::before { background: var(--accent-abogado); }
+        .boss-card[data-rule="espejo"]::before { background: var(--accent-socratico); }
+        .boss-card[data-rule="silencio"]::before { background: var(--accent-barrio); }
+        .boss-card[data-rule="debate_ciego"]::before { background: var(--accent-nihilista); }
+        .boss-card[data-rule="eco"]::before { background: var(--accent-guru); }
+        .boss-card[data-rule="caos"]::before { background: var(--accent-troll); }
+
+        .boss-card::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.25s; }
+        .boss-card:hover { border-color: var(--border-mid); }
+        .boss-card:hover::before { opacity: 0.7; }
+        .boss-card:hover::after  { opacity: 1; background: radial-gradient(ellipse at 0% 50%, rgba(255,255,255,0.05) 0%, transparent 70%); }
+
+        .boss-card.selected { background: var(--bg-raised); border-color: var(--border-mid); }
+        .boss-card.selected::before, .boss-card.selected::after { opacity: 1; }
+
+        /* selected card glows based on boss type */
+        .boss-card.selected[data-boss="normal"] { border-color: var(--accent-normal); box-shadow: 0 0 15px rgba(16, 185, 129, 0.35), inset 0 0 20px rgba(16, 185, 129, 0.1); }
+        .boss-card.selected[data-boss="troll"] { border-color: var(--accent-troll); box-shadow: 0 0 15px rgba(236, 72, 153, 0.35), inset 0 0 20px rgba(236, 72, 153, 0.1); }
+        .boss-card.selected[data-boss="politico"] { border-color: var(--accent-politico); box-shadow: 0 0 15px rgba(124, 58, 237, 0.35), inset 0 0 20px rgba(124, 58, 237, 0.1); }
+        .boss-card.selected[data-boss="conspira"] { border-color: var(--accent-conspira); box-shadow: 0 0 15px rgba(234, 179, 8, 0.35), inset 0 0 20px rgba(234, 179, 8, 0.1); }
+        .boss-card.selected[data-boss="abogado"] { border-color: var(--accent-abogado); box-shadow: 0 0 15px rgba(245, 158, 11, 0.35), inset 0 0 20px rgba(245, 158, 11, 0.1); }
+        .boss-card.selected[data-boss="academico"] { border-color: var(--accent-academico); box-shadow: 0 0 15px rgba(14, 116, 144, 0.35), inset 0 0 20px rgba(14, 116, 144, 0.1); }
+        .boss-card.selected[data-boss="nihilista"] { border-color: var(--accent-nihilista); box-shadow: 0 0 15px rgba(113, 113, 122, 0.35), inset 0 0 20px rgba(113, 113, 122, 0.1); }
+        .boss-card.selected[data-boss="dogmatico"] { border-color: var(--accent-dogmatico); box-shadow: 0 0 15px rgba(217, 119, 6, 0.35), inset 0 0 20px rgba(217, 119, 6, 0.1); }
+        .boss-card.selected[data-boss="barrio"] { border-color: var(--accent-barrio); box-shadow: 0 0 15px rgba(185, 28, 28, 0.35), inset 0 0 20px rgba(185, 28, 28, 0.1); }
+        .boss-card.selected[data-boss="maquina"] { border-color: var(--accent-maquina); box-shadow: 0 0 15px rgba(255, 255, 255, 0.35), inset 0 0 20px rgba(255, 255, 255, 0.1); }
+        .boss-card.selected[data-boss="socratico"] { border-color: var(--accent-socratico); box-shadow: 0 0 15px rgba(6, 182, 212, 0.35), inset 0 0 20px rgba(6, 182, 212, 0.1); }
+        .boss-card.selected[data-boss="karen"] { border-color: var(--accent-karen); box-shadow: 0 0 15px rgba(219, 39, 119, 0.35), inset 0 0 20px rgba(219, 39, 119, 0.1); }
+        .boss-card.selected[data-boss="guru"] { border-color: var(--accent-guru); box-shadow: 0 0 15px rgba(168, 85, 247, 0.35), inset 0 0 20px rgba(168, 85, 247, 0.1); }
+        .boss-card.selected[data-boss="sofista"] { border-color: var(--accent-sofista); box-shadow: 0 0 15px rgba(16, 185, 129, 0.35), inset 0 0 20px rgba(16, 185, 129, 0.1); }
+        .boss-card.selected[data-boss="influencer"] { border-color: var(--accent-influencer); box-shadow: 0 0 15px rgba(244, 63, 94, 0.35), inset 0 0 20px rgba(244, 63, 94, 0.1); }
+        .boss-card.selected[data-boss="ejecutivo"] { border-color: var(--accent-ejecutivo); box-shadow: 0 0 15px rgba(79, 70, 229, 0.35), inset 0 0 20px rgba(79, 70, 229, 0.1); }
+
+        /* selected mode glows */
+        .boss-card.selected[data-rule="standard"][data-flow="boss"] { border-color: var(--accent-politico); box-shadow: 0 0 15px rgba(124, 58, 237, 0.35); }
+        .boss-card.selected[data-rule="blitz"] { border-color: var(--accent-conspira); box-shadow: 0 0 15px rgba(234, 179, 8, 0.35); }
+        .boss-card.selected[data-rule="inquisidor"] { border-color: var(--accent-academico); box-shadow: 0 0 15px rgba(14, 116, 144, 0.35); }
+        .boss-card.selected[data-rule="sudden_death"] { border-color: var(--accent-barrio); box-shadow: 0 0 15px rgba(185, 28, 28, 0.35); }
+        .boss-card.selected[data-rule="gauntlet"] { border-color: var(--accent-abogado); box-shadow: 0 0 15px rgba(245, 158, 11, 0.35); }
+        .boss-card.selected[data-rule="espejo"] { border-color: var(--accent-socratico); box-shadow: 0 0 15px rgba(6, 182, 212, 0.35); }
+        .boss-card.selected[data-rule="silencio"] { border-color: var(--accent-barrio); box-shadow: 0 0 15px rgba(185, 28, 28, 0.35); }
+        .boss-card.selected[data-rule="debate_ciego"] { border-color: var(--accent-nihilista); box-shadow: 0 0 15px rgba(113, 113, 122, 0.35); }
+        .boss-card.selected[data-rule="eco"] { border-color: var(--accent-guru); box-shadow: 0 0 15px rgba(168, 85, 247, 0.35); }
+        .boss-card.selected[data-rule="caos"] { border-color: var(--accent-troll); box-shadow: 0 0 15px rgba(236, 72, 153, 0.35); }
+
+        .svg-icon { width: 36px; height: 36px; margin-bottom: 14px; stroke: var(--text-muted); transition: 0.2s; }
+        .boss-card:hover .svg-icon, .boss-card.selected .svg-icon { stroke: var(--text-primary); }
+        .boss-card[data-boss="normal"]:hover .svg-icon { stroke: var(--accent-normal); }
+
+        .boss-name { font-family: var(--font-display); font-size: 1.6rem; letter-spacing: 0.08em; margin-bottom: 6px; display: block; color: var(--text-primary); }
+        .boss-desc { font-size: 0.7rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 14px; }
+        .boss-badge { display: inline-block; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; padding: 3px 8px; border: 1px solid var(--border-dim); color: var(--text-muted); }
+        .boss-api-tag { position: absolute; top: 12px; right: 12px; font-size: 0.55rem; letter-spacing: 0.15em; color: var(--text-ghost); text-transform: uppercase; }
+
+        /* Tesis */
+        .thesis-area { animation: fadeUp 0.5s 0.2s both; margin-bottom: 24px; max-width: 800px; margin-left: auto; margin-right: auto; width: 100%;}
+        #topic-input { width: 100%; background: var(--bg-surface); border: 1px solid var(--border-dim); border-top: none; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem; padding: 16px 18px; resize: none; height: 120px; outline: none; transition: border-color 0.2s; }
+        #topic-input:focus { border-color: var(--border-mid); }
+        #topic-input::placeholder { color: var(--text-ghost); }
+        .thesis-header { background: var(--bg-raised); border: 1px solid var(--border-dim); padding: 10px 18px; font-size: 0.62rem; letter-spacing: 0.3em; color: var(--text-ghost); text-transform: uppercase; }
+
+        /* Arena */
+        #battle-screen {
+            justify-content: flex-start;
+            max-width: 1000px;
+            width: calc(100% - 56px);
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%) scale(0.97);
+            padding-top: 20px;
+        }
+        #battle-screen.visible {
+            transform: translateX(-50%) scale(1);
+        }
+        
+        /* CORRECCIÓN: Botón de pausa posicionado dentro de la arena sin salir de la pantalla */
+        .pause-trigger { position: absolute; right: 0; top: 0; background: none; border: none; cursor: pointer; color: var(--text-ghost); transition: 0.2s; z-index: 5; padding: 5px;}
+        .pause-trigger:hover { color: var(--text-primary); }
+        .pause-trigger svg { width: 26px; height: 26px; }
+
+        .hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; background: var(--bg-surface); border: 1px solid var(--border-dim); padding: 14px 20px; margin-bottom: 14px; margin-top: 30px;}
+        .health-block { display: flex; flex-direction: row; gap: 14px; align-items: center; width: 100%; }
+        .health-block.right { flex-direction: row-reverse; }
+        .hud-info { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; }
+        .health-label { font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; font-weight: 700; }
+        .health-bar-bg { background: var(--bg-void); border: 1px solid var(--border-dim); height: 10px; width: 100%; overflow: hidden; }
+        #player-health-fill { background: var(--hp-player); height: 100%; width: 100%; transition: width 0.5s ease-out; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+        #ai-health-fill { background: var(--hp-ai); height: 100%; width: 100%; transition: width 0.5s ease-out; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); margin-left: auto; }
+        .hud-avatar {
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--border-dim);
+            background: var(--bg-void);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+        }
+        .hud-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .hud-avatar svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        /* Estilos de los Avatares de los Jefes en la Selección */
+        .boss-card-avatar {
+            width: 72px;
+            height: 72px;
+            border: 1px solid var(--border-dim);
+            background: var(--bg-void);
+            margin: 0 auto;
+            margin-bottom: 14px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s ease;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .boss-card-avatar svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .boss-selectable:hover .boss-card-avatar, .boss-selectable.selected .boss-card-avatar {
+            border-color: var(--text-primary);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+        .hud-vs { font-family: var(--font-display); font-size: 1.6rem; letter-spacing: 0.1em; color: var(--text-ghost); }
+
+        .hud.blind #player-health-fill, .hud.blind #ai-health-fill { opacity: 0; }
+        .hud.blind .health-bar-bg { background: rgba(30, 45, 74, 0.2); }
+
+        /* CORRECCIÓN DE SCROLL: Altura fija flex */
+        #chat-log {
+            flex-grow: 1;
+            min-height: 0;
+            background: var(--bg-void);
+            border: 1px solid var(--border-dim);
+            border-bottom: none;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        #chat-log::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-log::-webkit-scrollbar-track {
+            background: rgba(7, 11, 20, 0.5);
+        }
+        #chat-log::-webkit-scrollbar-thumb {
+            background: var(--border-mid);
+            border-radius: 3px;
+        }
+        #chat-log::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-politico);
+        }
+
+        /* Mensajes y Burbujas con Estilo Cyberpunk */
+        .message {
+            max-width: 80%;
+            padding: 14px 18px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            animation: slideIn 0.25s ease-out both;
+            border: 1px solid;
+            word-wrap: break-word;
+        }
+        .msg-player {
+            align-self: flex-end;
+            background: rgba(30, 58, 138, 0.2);
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #bfdbfe;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+            border-radius: 12px 12px 0 12px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(69, 10, 10, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fecaca;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
+            border-radius: 12px 12px 12px 0;
+        }
+        .msg-system {
+            align-self: center;
+            background: rgba(30, 45, 74, 0.1);
+            border-color: var(--border-dim);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            text-align: center;
+            max-width: 100%;
+            border-radius: 4px;
+            padding: 8px 16px;
+        }
+
+        /* Estilos Markdown */
+        .message ul {
+            margin-left: 24px;
+            margin-bottom: 8px;
+            margin-top: 8px;
+        }
+        .message li {
+            margin-bottom: 4px;
+        }
+        .message code {
+            font-family: var(--font-mono);
+            background: rgba(0, 0, 0, 0.35);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #38bdf8; /* Sky 400 */
+            border: 1px solid rgba(56, 189, 248, 0.15);
+        }
+        .message .code-block {
+            background: #05080f;
+            border: 1px solid var(--border-dim);
+            padding: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+            border-radius: 6px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .message .code-block code {
+            background: none;
+            padding: 0;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.85em;
+        }
+
+        /* Controles de Entrada */
+        .controls {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--border-dim);
+        }
+        #argument-input {
+            flex-grow: 1;
+            background: var(--bg-surface);
+            border: none;
+            border-right: 1px solid var(--border-dim);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            padding: 16px 18px;
+            resize: none;
+            height: 68px;
+            outline: none;
+        }
+        #argument-input::placeholder { color: var(--text-ghost); }
+        #attack-btn {
+            background: var(--bg-raised);
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            letter-spacing: 0.15em;
+            padding: 0 32px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            min-width: 170px;
+        }
+        #attack-btn:hover:not(:disabled) { background: #1a2540; color: #60a5fa; }
+        #attack-btn:disabled { background: var(--bg-surface); color: var(--text-ghost); cursor: not-allowed; }
+
+        /* Modal de Pausa Mejorado */
+        #pause-modal { position: absolute; inset: 0; background: rgba(7, 11, 20, 0.85); backdrop-filter: blur(4px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        #pause-modal.active { opacity: 1; pointer-events: all; }
+        .pause-box { background: var(--bg-surface); border: 1px solid var(--border-dim); padding: 30px; width: 340px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .pause-btn { background: transparent; border: 1px solid var(--border-dim); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.8rem; padding: 14px; width: 100%; margin-bottom: 12px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em; transition: 0.2s;}
+        .pause-btn:hover { background: var(--bg-raised); border-color: var(--border-mid); }
+        .pause-btn.danger { color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
+        .pause-btn.danger:hover { background: rgba(248, 113, 113, 0.1); border-color: #f87171; }
+
+        /* Animaciones */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes glitch { 0%, 93%, 100% { clip-path: polygon(0 45%, 100% 45%, 100% 55%, 0 55%); transform: translateX(3px); } 94% { clip-path: polygon(0 30%, 100% 30%, 100% 35%, 0 35%); transform: translateX(-5px); color: rgba(99,102,241,0.3); } 95% { clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0 65%); transform: translateX(4px); } 96% { clip-path: polygon(0 45%, 100% 45%, 100% 55%, 0 55%); transform: translateX(3px); } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
+        .shake-screen { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        .damage-flash { box-shadow: inset 0 0 60px rgba(220, 38, 38, 0.4) !important; }
+
+        @keyframes scanline-sweep {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .scanline {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(99, 102, 241, 0.04) 50%,
+                rgba(255,255,255,0)
+            );
+            pointer-events: none;
+            z-index: 10;
+            animation: scanline-sweep 12s linear infinite;
+        }
+
+        .glitch-damage {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            box-shadow: inset 0 0 80px rgba(239, 68, 68, 0.3) !important;
+            background-color: rgba(239, 68, 68, 0.04) !important;
+        }
+        .glitch-damage .message, .glitch-damage .hud, .glitch-damage .controls {
+            text-shadow: -2px 0 0 #38bdf8, 2px 0 0 #ef4444;
+        }
+
+        .glitch-success {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            box-shadow: inset 0 0 80px rgba(16, 185, 129, 0.25) !important;
+            background-color: rgba(16, 185, 129, 0.03) !important;
+        }
+        .glitch-success .message, .glitch-success .hud, .glitch-success .controls {
+            text-shadow: -2px 0 0 #10b981, 2px 0 0 #3b82f6;
+        }
+
+        /* Ambient glows for standard components */
+        .menu-btn:hover:not(:disabled) {
+            background: var(--bg-raised);
+            border-color: var(--accent-politico);
+            padding-left: 36px;
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.2);
+        }
+        
+        .btn-large:hover:not(:disabled) {
+            background: var(--bg-raised);
+            border-color: var(--accent-politico);
+            color: var(--text-primary);
+            letter-spacing: 0.3em;
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.25);
+        }
+
+        /* Glow effects for health bars */
+        #player-health-fill {
+            background: linear-gradient(90deg, #2563eb, #3b82f6) !important;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+        }
+        #ai-health-fill {
+            background: linear-gradient(90deg, #ef4444, #dc2626) !important;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+        }
+
+        /* Low HP screen glow */
+        #battle-screen.low-hp {
+            box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.3) !important;
+            animation: pulseLowHp 1.5s infinite alternate;
+        }
+        @keyframes pulseLowHp {
+            from { box-shadow: inset 0 0 30px rgba(239, 68, 68, 0.2); }
+            to { box-shadow: inset 0 0 60px rgba(239, 68, 68, 0.5); }
+        }
+
+        /* Summary Modal Styles */
+        .summary-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 0 35px rgba(0, 0, 0, 0.6);
+            animation: fadeUp 0.4s ease both;
+        }
+        .summary-outcome {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            letter-spacing: 0.1em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .summary-outcome.win {
+            color: var(--accent-normal);
+            text-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+        }
+        .summary-outcome.loss {
+            color: var(--accent-barrio);
+            text-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+        .summary-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-mid), transparent);
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .summary-details {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+        }
+        .summary-row span:last-child {
+            color: var(--text-primary);
+            font-weight: bold;
+        }
+        .summary-unlocks {
+            width: 100%;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-dim);
+        }
+        #summary-achievements-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .summary-ach-toast {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(34, 197, 94, 0.05);
+            border: 1px solid var(--accent-normal);
+            padding: 8px 12px;
+            font-size: 0.7rem;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        /* Perfil y Logros Styles */
+        .profile-container {
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            margin-top: 20px;
+            animation: fadeUp 0.5s 0.1s both;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .profile-layout {
+            display: flex;
+            gap: 28px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .profile-preview-panel {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 0;
+        }
+        .profile-customization-panel {
+            flex: 1;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            min-width: 0;
+        }
+        .profile-bio-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+            border-left: 3px solid var(--theme-accent, var(--accent-politico));
+            line-height: 1.5;
+            min-height: 54px;
+        }
+        .profile-featured-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.65rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--theme-accent, var(--accent-normal));
+            padding: 2px 8px;
+            border-radius: 4px;
+            width: fit-content;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+        }
+        .profile-card-header {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 20px;
+        }
+        .profile-avatar-box {
+            width: 70px;
+            height: 70px;
+            border: 1px solid var(--theme-accent, var(--accent-politico));
+            background: var(--bg-void);
+            box-shadow: 0 0 10px var(--theme-accent, rgba(168, 85, 247, 0.2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            overflow: hidden;
+        }
+        .profile-avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-identity {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .profile-name {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: bold;
+        }
+        .profile-rank {
+            font-family: var(--font-display);
+            font-size: 0.8rem;
+            color: var(--theme-accent, var(--accent-normal));
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .profile-xp-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .profile-xp-text {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+        }
+        .profile-xp-bar {
+            height: 6px;
+            background: var(--bg-void);
+            border: 1px solid var(--border-dim);
+            overflow: hidden;
+        }
+        #profile-xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-normal), var(--theme-accent, var(--accent-politico)));
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        @media (max-width: 800px) {
+            .profile-layout {
+                flex-direction: column;
+            }
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .stat-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .stat-num {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        .stat-label {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .achievements-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .achievement-card {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 8px 12px;
+            opacity: 0.4;
+            transition: all 0.3s;
+        }
+        .achievement-card.unlocked {
+            opacity: 1;
+            border-color: var(--accent-normal);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.1);
+        }
+        .achievement-icon {
+            font-size: 1.5rem;
+            filter: grayscale(100%);
+            transition: filter 0.3s;
+        }
+        .achievement-card.unlocked .achievement-icon {
+            filter: grayscale(0%);
+        }
+        .achievement-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .achievement-title {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .achievement-desc {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+        }
+
+        /* Perks selection styles */
+        .perk-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .perk-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        .perk-card:hover {
+            border-color: var(--border-mid);
+            background: var(--bg-raised);
+        }
+        .perk-card.selected {
+            border-color: var(--accent-normal);
+            background: var(--bg-raised);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.15);
+        }
+        .perk-icon-box {
+            font-size: 1.6rem;
+            color: var(--accent-normal);
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .perk-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .perk-name {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .perk-desc {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    <canvas id="effects-canvas" style="position: fixed; inset: 0; pointer-events: none; z-index: 99;"></canvas>
+
+    <div id="menu-screen" class="screen visible">
+        <div class="menu-eyebrow">Sistema de Combate Lógico v1.0</div>
+        <div class="menu-title">AXIOMA</div>
+        <div class="menu-divider"></div>
+        <div class="menu-tagline">El cuadrilátero de la mente</div>
+
+        <nav class="menu-nav">
+            <button class="menu-btn" id="btn-goto-modes">▶ &nbsp;Iniciar Partida</button>
+            <button class="menu-btn" id="btn-goto-profile">📊 &nbsp;Perfil y Logros</button>
+            <button class="menu-btn" id="btn-goto-settings">⚙ &nbsp;Ajustes de Motor (API)</button>
+            <button class="menu-btn" id="btn-exit">⏏ &nbsp;Salir del Sistema</button>
+        </nav>
+        <div class="menu-version">AXIOMA / BUILD 1.0.1-PRO / ARCH LINUX</div>
+    </div>
+
+    <div id="settings-screen" class="screen hidden">
+        <div class="setup-header">
+            <button class="back-btn back-to-menu">← Volver</button>
+            <div class="setup-title">AJUSTES DE MOTOR</div>
+        </div>
+        <div class="settings-container">
+            <div class="settings-tabs">
+                <button class="settings-tab-btn active" data-tab="apis">APIS</button>
+                <button class="settings-tab-btn" data-tab="video">VIDEO</button>
+                <button class="settings-tab-btn" data-tab="audio">AUDIO</button>
+                <button class="settings-tab-btn" data-tab="teclado">TECLADO</button>
+            </div>
+
+            <!-- TAB CONTENT: APIS -->
+            <div class="settings-tab-content" id="tab-apis">
+                <div class="section-label" style="margin-top: 0; margin-bottom: 15px;">// CONFIGURACIÓN DE LLAVES MAESTRAS</div>
+                <div class="input-group">
+                    <label>Google Gemini API Key (Requerido para Modo Normal y Analíticos)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="input-gemini" class="api-input" placeholder="AIzaSy..." style="flex-grow: 1;">
+                        <button class="test-key-btn" id="btn-test-gemini">Probar</button>
+                    </div>
+                    <div class="test-result-msg" id="gemini-test-result"></div>
+                </div>
+                <div class="input-group">
+                    <label>Groq API Key (Requerido para Jefes Rápidos)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="input-groq" class="api-input" placeholder="gsk_..." style="flex-grow: 1;">
+                        <button class="test-key-btn" id="btn-test-groq">Probar</button>
+                    </div>
+                    <div class="test-result-msg" id="groq-test-result"></div>
+                </div>
+
+                <div class="api-help-box" style="background: var(--bg-void); border: 1px solid var(--border-dim); padding: 16px; margin-top: 24px; font-size: 0.72rem; line-height: 1.5; color: var(--text-muted);">
+                    <div style="color: var(--accent-politico); font-weight: bold; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.05em;">¿Cómo conseguir tus llaves API gratis?</div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <strong style="color: var(--text-primary);">1. Google Gemini Key (Gratuita):</strong>
+                        <ul style="margin-left: 16px; margin-top: 4px; list-style-type: square;">
+                            <li>Entra a <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-normal); text-decoration: none; font-weight: bold;">Google AI Studio</a> e inicia sesión con cualquier cuenta de Gmail.</li>
+                            <li>Haz clic en el botón azul <strong>"Get API Key"</strong> (Obtener clave API) en la esquina superior izquierda.</li>
+                            <li>Presiona <strong>"Create API Key"</strong>, selecciona un proyecto de Google Cloud (o crea uno nuevo) y copia la clave generada (empieza por "AIzaSy").</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <strong style="color: var(--text-primary);">2. Groq Key (Gratuita para pruebas):</strong>
+                        <ul style="margin-left: 16px; margin-top: 4px; list-style-type: square;">
+                            <li>Entra a <a href="https://console.groq.com/" target="_blank" style="color: var(--accent-normal); text-decoration: none; font-weight: bold;">Groq Console</a> y regístrate con tu correo.</li>
+                            <li>En el menú izquierdo, haz clic en la sección <strong>"API Keys"</strong>.</li>
+                            <li>Haz clic en <strong>"Create API Key"</strong>, ponle un nombre (ej. "Axioma") y copia la clave generada (empieza por "gsk_").</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT: VIDEO -->
+            <div class="settings-tab-content hidden" id="tab-video">
+                <div class="section-label" style="margin-top: 0; margin-bottom: 15px;">// CONFIGURACIÓN DE PANTALLA Y RENDIMIENTO</div>
+                
+                <div class="setting-row">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Pantalla Completa</span>
+                        <span class="setting-desc">Alterna el modo de visualización a pantalla completa.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-fullscreen">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Escala de Interfaz</span>
+                        <span class="setting-desc">Ajusta el tamaño global de la fuente y de la interfaz.</span>
+                    </div>
+                    <select id="select-scale" class="settings-select">
+                        <option value="100">100% (Normal)</option>
+                        <option value="115">115% (Mediano)</option>
+                        <option value="130">130% (Grande)</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Rejilla de Fondo</span>
+                        <span class="setting-desc">Muestra u oculta la rejilla de fondo cyberpunk.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-grid" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Efecto Scanlines</span>
+                        <span class="setting-desc">Activa el barrido de líneas horizontales retro (CRT).</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-scanlines" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT: AUDIO -->
+            <div class="settings-tab-content hidden" id="tab-audio">
+                <div class="section-label" style="margin-top: 0; margin-bottom: 15px;">// CONFIGURACIÓN DE EFECTOS SONOROS SYNTH</div>
+                
+                <div class="setting-row">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Efectos de Sonido</span>
+                        <span class="setting-desc">Habilita los beeps y efectos de sonido analógicos.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-sound" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Música de Fondo Ambient</span>
+                        <span class="setting-desc">Habilita la música de fondo synthwave generativa.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-bgm" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Volumen Maestro</span>
+                        <span class="setting-desc">Ajusta la intensidad global de la síntesis de audio.</span>
+                    </div>
+                    <input type="range" id="slider-volume" class="volume-slider" min="0" max="1" step="0.05" value="0.5">
+                </div>
+            </div>
+
+            <!-- TAB CONTENT: TECLADO -->
+            <div class="settings-tab-content hidden" id="tab-teclado">
+                <div class="section-label" style="margin-top: 0; margin-bottom: 15px;">// ATAJOS Y COMPORTAMIENTO DE ENTRADA</div>
+                
+                <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 15px;">
+                    <div class="setting-label-block">
+                        <span class="setting-title">Enviar Argumento con:</span>
+                        <span class="setting-desc">Configura la tecla o combinación para enviar tus argumentos en el debate.</span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                        <label class="keyboard-option">
+                            <input type="radio" name="shortcut-send" value="enter" checked>
+                            <span>[Enter] Enviar &nbsp;/&nbsp; [Ctrl+Enter] Salto de Línea</span>
+                        </label>
+                        <label class="keyboard-option">
+                            <input type="radio" name="shortcut-send" value="ctrl-enter">
+                            <span>[Ctrl+Enter] Enviar &nbsp;/&nbsp; [Enter] Salto de Línea</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-large" id="btn-save-keys">Guardar Configuración</button>
+            <div class="status-msg" id="settings-status"></div>
+        </div>
+    </div>
+    <div id="profile-screen" class="screen hidden">
+        <div class="setup-header">
+            <button class="back-btn back-to-menu">← Volver</button>
+            <div class="setup-title">PERFIL DEL DEBATIENTE</div>
+        </div>
+        <div class="profile-container">
+            <div class="profile-layout">
+                <!-- Columna Izquierda: Vista Previa y Logros -->
+                <div class="profile-preview-panel">
+                    <div class="profile-card-header" id="profile-card-preview">
+                        <div class="profile-avatar-box" id="profile-avatar-display">👤</div>
+                        <div class="profile-identity">
+                            <div class="profile-name" id="profile-name-display">DEBATIENTE</div>
+                            <div class="profile-featured-badge" id="profile-featured-badge-display" style="display: none;">
+                                <span class="badge-icon">🏆</span> <span class="badge-title">Ninguna Insignia</span>
+                            </div>
+                            <div class="profile-rank" id="profile-rank-title">Novicio Lógico</div>
+                            <div class="profile-xp-bar-container">
+                                <div class="profile-xp-text">
+                                    <span>Progreso del Logos</span>
+                                    <span><span id="profile-xp-current">0</span> / <span id="profile-xp-next">100</span> XP</span>
+                                </div>
+                                <div class="profile-xp-bar"><div id="profile-xp-fill"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-bio-box" id="profile-bio-display">
+                        "Sin descripción todavía..."
+                    </div>
+
+                    <div class="section-label" style="margin-top: 10px;">// REGISTRO DE COMBATES</div>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-wins">0</span>
+                            <span class="stat-label">Debates Ganados</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-losses">0</span>
+                            <span class="stat-label">Debates Perdidos</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-accuracy">100%</span>
+                            <span class="stat-label">Tasa de Victorias</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-streak">0</span>
+                            <span class="stat-label">Racha Máxima</span>
+                        </div>
+                    </div>
+
+                    <div class="section-label" style="margin-top: 10px;">// LOGROS Y MEDALLAS</div>
+                    <div class="achievements-list" id="achievements-container">
+                        <!-- Se cargan por JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Panel de Personalización -->
+                <div class="profile-customization-panel">
+                    <div class="section-label">// PERSONALIZACIÓN</div>
+                    
+                    <div class="input-group">
+                        <label for="profile-name-input">Nombre de Debatiente</label>
+                        <input type="text" id="profile-name-input" class="api-input" max-length="16" placeholder="Escribe tu nombre...">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="profile-bio-input">Lema / Descripción (Bio)</label>
+                        <textarea id="profile-bio-input" class="api-input" style="height: 70px; resize: none;" max-length="100" placeholder="Escribe tu lema..."></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Imagen de Perfil</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button class="back-btn" id="btn-upload-avatar" style="border-color: var(--accent-politico); color: var(--text-primary);">Subir Foto</button>
+                            <button class="back-btn" id="btn-reset-avatar">Restaurar Defecto</button>
+                            <input type="file" id="profile-avatar-upload" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="profile-theme-select">Estilo del Logos (Tema)</label>
+                        <select id="profile-theme-select" class="settings-select" style="width: 100%;">
+                            <option value="neutral">Original (Indigo)</option>
+                            <option value="academico">Académico (Cian)</option>
+                            <option value="politico">Político (Púrpura)</option>
+                            <option value="barrio">Rebelde (Rojo)</option>
+                            <option value="sofista">Sofista (Verde Esmeralda)</option>
+                            <option value="guru">Gurú (Lavanda)</option>
+                            <option value="ejecutivo">Ejecutivo (Azul Cobalto)</option>
+                            <option value="troll">Troll (Magenta)</option>
+                            <option value="conspira">Paranoico (Dorado)</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="profile-badge-select">Insignia Destacada</label>
+                        <select id="profile-badge-select" class="settings-select" style="width: 100%;">
+                            <option value="">Ninguna Insignia</option>
+                            <!-- Logros desbloqueados irán aquí -->
+                        </select>
+                    </div>
+
+                    <button class="btn-large" id="btn-save-profile" style="margin-top: auto;">Guardar Cambios</button>
+                    <div class="status-msg" id="profile-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mode-screen" class="screen hidden">
+        <div class="setup-header">
+            <button class="back-btn back-to-menu">← Menú</button>
+            <div class="setup-title">REGLAS DE ARENA</div>
+        </div>
+        <div class="section-label">// SELECCIONA LA MODALIDAD</div>
+        
+        <div class="boss-grid modes">
+            <div class="boss-card mode-card" data-rule="standard" data-flow="normal">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                <span class="boss-name" style="color: var(--accent-normal);">Modo Normal</span>
+                <p class="boss-desc">Debate civilizado contra un oponente de lógica limpia. Ideal para practicar estructura.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="standard" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span class="boss-name" style="color: var(--accent-politico);">Desafío Jefes</span>
+                <p class="boss-desc">Enfréntate al Panteón. Oponentes con falacias marcadas y estilos injustos.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="blitz" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                <span class="boss-name" style="color: var(--accent-conspira);">Modo Blitz</span>
+                <p class="boss-desc">Debate relámpago. Tienes exactamente 30 segundos para contraargumentar o perderás salud.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="inquisidor" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <span class="boss-name" style="color: var(--accent-academico);">Inquisidor</span>
+                <p class="boss-desc">Ruleta rusa lógica. El sistema te obligará a defender una postura polémica aleatoria.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="sudden_death" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                <span class="boss-name" style="color: var(--accent-barrio);">Muerte Súbita</span>
+                <p class="boss-desc">Sin segundas oportunidades. Ambos tienen 1 de HP. Cualquier fisura lógica es letal.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="gauntlet" data-flow="gauntlet">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span class="boss-name" style="color: var(--accent-abogado);">Guantelete</span>
+                <p class="boss-desc">Supervivencia pura. Enfréntate a 3 jefes al azar consecutivamente sin regenerar salud.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="espejo" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
+                <span class="boss-name" style="color: var(--accent-socratico);">Modo Espejo</span>
+                <p class="boss-desc">El oponente recibe instrucciones de usar tu propia tesis e ideas previas en tu contra.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="silencio" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                <span class="boss-name" style="color: var(--accent-barrio);">Silencio Administrativo</span>
+                <p class="boss-desc">Presión total. Tu credibilidad disminuye en -2 HP por segundo. Ataca antes de colapsar.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="debate_ciego" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                <span class="boss-name" style="color: var(--accent-nihilista);">Debate Ciego</span>
+                <p class="boss-desc">Información nula. Las barras de vida y credibilidad están ocultas. Confía en tu destreza.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="eco" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                <span class="boss-name" style="color: var(--accent-guru);">Eco Mental</span>
+                <p class="boss-desc">Repetir ideas es penalizado. Usar palabras de tu turno anterior causará daño a tu credibilidad.</p>
+            </div>
+            <div class="boss-card mode-card" data-rule="caos" data-flow="boss">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                <span class="boss-name" style="color: var(--accent-troll);">Ruleta del Caos</span>
+                <p class="boss-desc">Inestabilidad mental. El jefe cambia aleatoriamente de personalidad en cada turno.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="boss-screen" class="screen hidden">
+        <div class="setup-header">
+            <button class="back-btn" id="btn-back-to-modes">← Modos</button>
+            <div class="setup-title">LA ARENA OSCURA</div>
+        </div>
+        <div class="section-label">// 01 — Elige a tu oponente</div>
+        <div class="boss-grid bosses">
+            
+            <div class="boss-card boss-selectable" data-boss="troll">
+                <span class="boss-api-tag">GROQ</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                <span class="boss-name" style="color: var(--accent-troll);">El Troll</span>
+                <p class="boss-desc">Ignora los argumentos y se burla de ellos. Te ataca con sarcasmo buscando sacarte de quicio.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="politico">
+                <span class="boss-api-tag">GROQ</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span class="boss-name" style="color: var(--accent-politico);">El Político</span>
+                <p class="boss-desc">Maestro de la evasión. Usa falacias de espantapájaros con elegancia para desviar tu punto.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="conspira">
+                <span class="boss-api-tag">GROQ</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <span class="boss-name" style="color: var(--accent-conspira);">Conspiranoico</span>
+                <p class="boss-desc">Experto en falsa equivalencia. Conecta cualquier argumento con el Nuevo Orden Mundial.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="abogado">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h18"></path></svg>
+                <span class="boss-name" style="color: var(--accent-abogado);">El Abogado</span>
+                <p class="boss-desc">Ataca exclusivamente semántica. Si usas una palabra ambigua, te penaliza legalmente.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="academico">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                <span class="boss-name" style="color: var(--accent-academico);">El Académico</span>
+                <p class="boss-desc">Frío, metódico. Destruye la lógica defectuosa sin piedad exigiendo premisas válidas.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="nihilista">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 0-10 10"></path></svg>
+                <span class="boss-name" style="color: var(--accent-nihilista);">El Nihilista</span>
+                <p class="boss-desc">Su objetivo no es ganarte, sino convencerte de que el debate en sí mismo no tiene sentido.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="dogmatico">
+                <span class="boss-api-tag">GROQ</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                <span class="boss-name" style="color: var(--accent-dogmatico);">El Dogmático</span>
+                <p class="boss-desc">No cede ante lógica pura. Responde basándose en dogmas y falacias de autoridad.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="barrio">
+                <span class="boss-api-tag">GROQ</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                <span class="boss-name" style="color: var(--accent-barrio);">Buscapleitos</span>
+                <p class="boss-desc">Agresivo y sin filtros. Ataca al punto débil y se burla de tus contradicciones rápido.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="maquina">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                <span class="boss-name" style="color: var(--accent-maquina);">La Máquina</span>
+                <p class="boss-desc">Evalúa argumentos puramente en eficiencia y probabilidad. Cero empatía, pura dicotomía.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="socratico">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span class="boss-name" style="color: var(--accent-socratico);">El Socrático</span>
+                <p class="boss-desc">No realiza afirmaciones directas. Te interroga con ironía y preguntas socráticas para hacerte caer en contradicciones.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="karen">
+                <span class="boss-api-tag">GROQ</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span class="boss-name" style="color: var(--accent-karen);">Karen</span>
+                <p class="boss-desc">Indignada y escandalizada por defecto. Exige hablar con el "manager" lógico y trata sus sentimientos como leyes físicas.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="guru">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                <span class="boss-name" style="color: var(--accent-guru);">Gurú Espiritual</span>
+                <p class="boss-desc">Positividad tóxica absoluta. Esquiva argumentos lógicos hablando de vibras, energías y sanación cuántica.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="sofista">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg>
+                <span class="boss-name" style="color: var(--accent-sofista);">El Sofista</span>
+                <p class="boss-desc">Te abrumará con retórica barroca y vocabulario académico vacío. Usa ambigüedades sutiles para enmascarar su falta de lógica.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="influencer">
+                <span class="boss-api-tag">GROQ</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                <span class="boss-name" style="color: var(--accent-influencer);">El Influencer</span>
+                <p class="boss-desc">Argumenta a base de popularidad (ad populum), hashtags y modas. Te cancelará o dirá que no tienes interacción si lo acorralas.</p>
+            </div>
+            <div class="boss-card boss-selectable" data-boss="ejecutivo">
+                <span class="boss-api-tag">GEMINI</span>
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                <span class="boss-name" style="color: var(--accent-ejecutivo);">Ejecutivo Corporativo</span>
+                <p class="boss-desc">Habla únicamente con buzzwords empresariales (sinergia, disrupción, ROI). Tratará tu debate como una mala inversión o un KPI fallido.</p>
+            </div>
+
+        </div>
+        <button class="btn-large" id="btn-confirm-boss" disabled>Confirmar Oponente</button>
+    </div>
+
+    <div id="thesis-screen" class="screen hidden">
+        <div class="setup-header">
+            <button class="back-btn" id="btn-back-from-thesis">← Atrás</button>
+            <div class="setup-title">PREPARACIÓN</div>
+        </div>
+        <div class="thesis-area" style="max-width: 750px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 10px;">
+            <div class="section-label" id="thesis-subtitle">// 01 — DEFINE TU TESIS DE APERTURA</div>
+            <textarea id="topic-input" placeholder="Ej: La automatización extrema beneficiará a la humanidad a largo plazo..." style="height: 70px; resize: none; margin-bottom: 5px;"></textarea>
+            
+            <div class="section-label">// 02 — SELECCIONA TU VENTAJA MENTAL (PERK)</div>
+            <div class="perk-grid">
+                <div class="perk-card selected" data-perk="ockham">
+                    <div class="perk-icon-box">🪒</div>
+                    <div class="perk-info">
+                        <span class="perk-name">Navaja de Ockham</span>
+                        <span class="perk-desc">La explicación más simple suele ser la correcta. Aumenta tu daño infligido en un 20%.</span>
+                    </div>
+                </div>
+                <div class="perk-card" data-perk="estoico">
+                    <div class="perk-icon-box">🛡️</div>
+                    <div class="perk-info">
+                        <span class="perk-name">Escudo Estoico</span>
+                        <span class="perk-desc">Controla tus emociones. Reduce todo el daño que recibes en combate, Blitz y Silencio en un 20%.</span>
+                    </div>
+                </div>
+                <div class="perk-card" data-perk="claridad">
+                    <div class="perk-icon-box">⏳</div>
+                    <div class="perk-info">
+                        <span class="perk-name">Mente Clara</span>
+                        <span class="perk-desc">Lógica serena bajo presión. Otorga +10 segundos adicionales en el temporizador del Modo Blitz.</span>
+                    </div>
+                </div>
+                <div class="perk-card" data-perk="elocuencia">
+                    <div class="perk-icon-box">💬</div>
+                    <div class="perk-info">
+                        <span class="perk-name">Elocuencia Pura</span>
+                        <span class="perk-desc">Léxico amplio. Reduce el daño por repetición de palabras en Modo Eco Mental en un 50%.</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn-large" id="start-battle-btn" disabled style="margin-top: 15px;">⚔ Entrar al Cuadrilátero</button>
+        </div>
+    </div>
+
+    <div id="battle-screen" class="screen hidden">
+        
+        <button class="pause-trigger" id="btn-pause" title="Pausa">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        </button>
+
+        <div class="hud">
+            <div class="health-block">
+                <div class="hud-avatar" id="hud-player-avatar">👤</div>
+                <div class="hud-info">
+                    <div class="health-label" id="player-health-label" style="color: #60a5fa;">🧠 Tu Credibilidad</div>
+                    <div class="health-bar-bg"><div id="player-health-fill"></div></div>
+                </div>
+            </div>
+            <div class="hud-vs">VS</div>
+            <div class="health-block right">
+                <div class="hud-info" style="align-items: flex-end;">
+                    <div class="health-label" style="color: #f87171;" id="ai-name-label">💀 Oponente</div>
+                    <div class="health-bar-bg"><div id="ai-health-fill"></div></div>
+                </div>
+                <div class="hud-avatar" id="hud-ai-avatar">🤖</div>
+            </div>
+        </div>
+
+        <div id="chat-log"></div>
+
+        <div class="controls">
+            <textarea id="argument-input" placeholder="Escribe tu argumento..."></textarea>
+            <button id="attack-btn">Atacar</button>
+        </div>
+
+        <div id="pause-modal">
+            <div class="pause-box">
+                <div class="setup-title" style="font-size: 1.5rem; margin-bottom: 24px;">SISTEMA EN PAUSA</div>
+                <button class="pause-btn" id="btn-resume">▶ Reanudar Combate</button>
+                <button class="pause-btn" id="btn-restart">↻ Reiniciar Debate</button>
+                <button class="pause-btn danger" id="btn-surrender">⏏ Salir al Menú Principal</button>
+            </div>
+    </div>
+
+    <div id="summary-modal" class="screen hidden" style="background: rgba(7, 11, 20, 0.95); z-index: 50;">
+        <div class="summary-box">
+            <div class="summary-outcome" id="summary-outcome-text">VICTORIA LÓGICA</div>
+            <div class="summary-divider"></div>
+            
+            <div class="summary-details">
+                <div class="summary-row">
+                    <span>Oponente:</span>
+                    <span id="summary-boss-name" style="color: var(--accent-normal);">Karen</span>
+                </div>
+                <div class="summary-row">
+                    <span>Modo de Juego:</span>
+                    <span id="summary-game-mode" style="text-transform: uppercase;">Muerte Súbita</span>
+                </div>
+                <div class="summary-row">
+                    <span>Ventaja Mental:</span>
+                    <span id="summary-perk-name" style="color: var(--accent-politico);">Escudo Estoico</span>
+                </div>
+                <div class="summary-row" style="margin-top: 15px; border-top: 1px dashed var(--border-dim); padding-top: 10px;">
+                    <span>Experiencia Ganada:</span>
+                    <span id="summary-xp-gained" style="color: var(--accent-normal);">+35 XP</span>
+                </div>
+                <div class="summary-row">
+                    <span>Credibilidad Restante:</span>
+                    <span id="summary-final-hp" style="color: #60a5fa;">80 / 100 HP</span>
+                </div>
+            </div>
+            
+            <div class="summary-unlocks" id="summary-unlocks-container" style="display: none;">
+                <div class="section-label" style="text-align: center; margin-bottom: 5px;">// ¡LOGROS DESBLOQUEADOS!</div>
+                <div id="summary-achievements-list"></div>
+            </div>
+            
+            <div class="summary-buttons" style="display: flex; gap: 15px; margin-top: 25px; width: 100%;">
+                <button class="btn-large" id="btn-summary-restart" style="font-size: 1.1rem; padding: 12px; height: 50px;">↻ Revancha</button>
+                <button class="btn-large danger" id="btn-summary-menu" style="font-size: 1.1rem; padding: 12px; height: 50px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);">← Menú</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="renderer.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
+                    .catch((err) => console.error('Error al registrar el Service Worker:', err));
+            });
+        }
+    </script>
+</body>
+</html>
