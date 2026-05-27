@@ -115,7 +115,7 @@ Tener instalado [Node.js](https://nodejs.org/) (versión 16 o superior recomenda
 
 1.  **Clonar el repositorio**:
     ```bash
-    git clone https://github.com/tu-usuario/axioma.git
+    git clone https://github.com/ItsChrisPJ/axioma.git
     cd axioma
     ```
 
