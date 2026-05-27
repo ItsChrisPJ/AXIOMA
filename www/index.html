@@ -701,17 +701,159 @@
         }
 
         /* Summary Modal Styles */
-        .summary-box {
+        /* Summary Modal Styles */
+        .summary-container-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 950px;
+            width: 100%;
+            margin: auto;
             background: var(--bg-surface);
             border: 1px solid var(--border-dim);
             padding: 30px;
-            max-width: 450px;
+            box-shadow: 0 0 35px rgba(0, 0, 0, 0.6);
+            animation: fadeUp 0.4s ease both;
+        }
+        .summary-header-box {
+            grid-column: span 2;
             width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 0 35px rgba(0, 0, 0, 0.6);
-            animation: fadeUp 0.4s ease both;
+        }
+        .summary-left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .summary-right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .summary-card {
+            background: rgba(7, 11, 20, 0.4);
+            border: 1px solid var(--border-dim);
+            padding: 20px;
+            border-radius: 4px;
+        }
+        .summary-footer-box {
+            grid-column: span 2;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        /* Estilos del Radar Chart */
+        #radar-chart-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 0;
+        }
+        .radar-grid {
+            stroke: var(--border-dim);
+            stroke-width: 1px;
+            fill: none;
+        }
+        .radar-axis-line {
+            stroke: var(--border-mid);
+            stroke-width: 1px;
+        }
+        .radar-axis-label {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            fill: var(--text-muted);
+            font-weight: bold;
+            letter-spacing: 0.05em;
+        }
+        .radar-area {
+            fill: rgba(6, 182, 212, 0.2);
+            stroke: #06b6d4;
+            stroke-width: 2px;
+            filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.5));
+        }
+        .radar-point {
+            fill: var(--text-primary);
+            stroke: #06b6d4;
+            stroke-width: 1.5px;
+        }
+
+        /* Estilos de la Auditoría de Falacias */
+        .audit-list-container {
+            max-height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 5px;
+        }
+        .audit-list-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .audit-list-container::-webkit-scrollbar-thumb {
+            background: var(--border-mid);
+        }
+        .audit-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border: 1px solid var(--border-dim);
+            background: rgba(7, 11, 20, 0.6);
+            font-size: 0.8rem;
+        }
+        .audit-item.success {
+            border-left: 3px solid var(--accent-normal);
+            color: #86efac;
+        }
+        .audit-item.failed, .audit-item.timedout {
+            border-left: 3px solid var(--accent-barrio);
+            color: #fca5a5;
+        }
+        .audit-item.ignored {
+            border-left: 3px solid var(--text-muted);
+            color: var(--text-muted);
+        }
+        .audit-status {
+            font-weight: bold;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .audit-details {
+            display: flex;
+            flex-direction: column;
+            text-align: right;
+        }
+        .audit-fallacy {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+        .audit-turn {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .audit-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 20px;
+            border: 1px dashed var(--border-dim);
+        }
+
+        /* Media queries para responsivo en resumen */
+        @media (max-width: 800px) {
+            .summary-container-grid {
+                grid-template-columns: 1fr;
+                padding: 15px;
+                margin-top: 20px;
+                overflow-y: auto;
+                max-height: 95vh;
+            }
+            .summary-header-box, .summary-footer-box {
+                grid-column: span 1;
+            }
         }
         .summary-outcome {
             font-family: var(--font-display);
@@ -2202,42 +2344,65 @@
             </div>
     </div>
 
-    <div id="summary-modal" class="screen hidden" style="background: rgba(7, 11, 20, 0.95); z-index: 50;">
-        <div class="summary-box">
-            <div class="summary-outcome" id="summary-outcome-text">VICTORIA LÓGICA</div>
-            <div class="summary-divider"></div>
-            
-            <div class="summary-details">
-                <div class="summary-row">
-                    <span>Oponente:</span>
-                    <span id="summary-boss-name" style="color: var(--accent-normal);">Karen</span>
+    <div id="summary-modal" class="screen hidden" style="background: rgba(7, 11, 20, 0.95); z-index: 50; overflow-y: auto;">
+        <div class="summary-container-grid">
+            <div class="summary-header-box">
+                <div class="summary-outcome" id="summary-outcome-text">VICTORIA LÓGICA</div>
+                <div class="summary-divider"></div>
+            </div>
+
+            <!-- Columna Izquierda: Datos y Gráfico de Radar -->
+            <div class="summary-left-column">
+                <div class="summary-card">
+                    <div class="section-label">// DATOS DE RENDIMIENTO</div>
+                    <div class="summary-details">
+                        <div class="summary-row">
+                            <span>Oponente:</span>
+                            <span id="summary-boss-name" style="color: var(--accent-normal);">Karen</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Modo de Juego:</span>
+                            <span id="summary-game-mode" style="text-transform: uppercase;">Muerte Súbita</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Ventaja Mental:</span>
+                            <span id="summary-perk-name" style="color: var(--accent-politico);">Escudo Estoico</span>
+                        </div>
+                        <div class="summary-row" style="margin-top: 15px; border-top: 1px dashed var(--border-dim); padding-top: 10px;">
+                            <span>Experiencia Ganada:</span>
+                            <span id="summary-xp-gained" style="color: var(--accent-normal);">+35 XP</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Credibilidad Restante:</span>
+                            <span id="summary-final-hp" style="color: #60a5fa;">80 / 100 HP</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="summary-row">
-                    <span>Modo de Juego:</span>
-                    <span id="summary-game-mode" style="text-transform: uppercase;">Muerte Súbita</span>
-                </div>
-                <div class="summary-row">
-                    <span>Ventaja Mental:</span>
-                    <span id="summary-perk-name" style="color: var(--accent-politico);">Escudo Estoico</span>
-                </div>
-                <div class="summary-row" style="margin-top: 15px; border-top: 1px dashed var(--border-dim); padding-top: 10px;">
-                    <span>Experiencia Ganada:</span>
-                    <span id="summary-xp-gained" style="color: var(--accent-normal);">+35 XP</span>
-                </div>
-                <div class="summary-row">
-                    <span>Credibilidad Restante:</span>
-                    <span id="summary-final-hp" style="color: #60a5fa;">80 / 100 HP</span>
+
+                <div class="summary-card">
+                    <div class="section-label">// RADAR DE LOGOMETRÍA</div>
+                    <div id="radar-chart-container"></div>
                 </div>
             </div>
-            
-            <div class="summary-unlocks" id="summary-unlocks-container" style="display: none;">
-                <div class="section-label" style="text-align: center; margin-bottom: 5px;">// ¡LOGROS DESBLOQUEADOS!</div>
-                <div id="summary-achievements-list"></div>
+
+            <!-- Columna Derecha: Auditoría de Falacias y Logros -->
+            <div class="summary-right-column">
+                <div class="summary-card" style="display: flex; flex-direction: column; flex-grow: 1;">
+                    <div class="section-label">// AUDITORÍA DE FALACIAS DETECTADAS</div>
+                    <div class="audit-list-container" id="summary-audit-list"></div>
+                </div>
+
+                <div class="summary-card" id="summary-unlocks-container" style="display: none;">
+                    <div class="section-label" style="text-align: center; margin-bottom: 5px;">// ¡LOGROS DESBLOQUEADOS!</div>
+                    <div id="summary-achievements-list"></div>
+                </div>
             </div>
-            
-            <div class="summary-buttons" style="display: flex; gap: 15px; margin-top: 25px; width: 100%;">
-                <button class="btn-large" id="btn-summary-restart" style="font-size: 1.1rem; padding: 12px; height: 50px;">↻ Revancha</button>
-                <button class="btn-large danger" id="btn-summary-menu" style="font-size: 1.1rem; padding: 12px; height: 50px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);">← Menú</button>
+
+            <div class="summary-footer-box">
+                <div class="summary-buttons" style="display: flex; gap: 15px; width: 100%;">
+                    <button class="btn-large" id="btn-summary-restart" style="font-size: 1.1rem; padding: 12px; height: 50px;">↻ Revancha</button>
+                    <button class="btn-large danger" id="btn-summary-menu" style="font-size: 1.1rem; padding: 12px; height: 50px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);">← Menú</button>
+                </div>
             </div>
         </div>
     </div>

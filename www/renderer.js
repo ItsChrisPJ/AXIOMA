@@ -49,6 +49,19 @@ let currentTopic = "";
 let isAiThinking = false;
 let selectedBoss = null;
 
+let battleStats = {
+    turns: 0,
+    playerDamageReceived: 0,
+    playerDamageInflicted: 0,
+    mitigatedDamage: 0,
+    successfulParries: 0,
+    failedParries: 0,
+    totalFallacies: 0,
+    tacticCardsPlayed: 0,
+    tacticCardsSuccessful: 0
+};
+let matchFallacyLog = [];
+
 let gameRule = 'standard';  // standard, blitz, inquisidor, sudden_death, gauntlet, espejo, silencio, debate_ciego, eco, caos
 let blitzTimer = null;
 let blitzTimeLeft = 30;
@@ -743,6 +756,109 @@ function recordMatchResult(isWin) {
     saveProfile();
 }
 
+function generateRadarSVG(stats) {
+    const cx = 150;
+    const cy = 150;
+    const R = 90;
+    
+    const axes = [
+        { name: "Rigor Lógico", val: stats.logicRigor },
+        { name: "Persuasión", val: stats.persuasion },
+        { name: "Evasión", val: stats.evasion },
+        { name: "Sesgos", val: stats.biasDetection },
+        { name: "Retórica", val: stats.rhetoric }
+    ];
+    
+    let gridHtml = "";
+    for (let level = 1; level <= 5; level++) {
+        const rSub = R * (level / 5);
+        const points = [];
+        for (let i = 0; i < 5; i++) {
+            const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+            const x = cx + rSub * Math.cos(angle);
+            const y = cy + rSub * Math.sin(angle);
+            points.push(`${x},${y}`);
+        }
+        gridHtml += `<polygon points="${points.join(' ')}" class="radar-grid" />`;
+    }
+    
+    let axisHtml = "";
+    const labelDistance = 112;
+    for (let i = 0; i < 5; i++) {
+        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const xEnd = cx + R * Math.cos(angle);
+        const yEnd = cy + R * Math.sin(angle);
+        axisHtml += `<line x1="${cx}" y1="${cy}" x2="${xEnd}" y2="${yEnd}" class="radar-axis-line" />`;
+        
+        const xLabel = cx + labelDistance * Math.cos(angle);
+        const yLabel = cy + labelDistance * Math.sin(angle);
+        
+        let textAnchor = "middle";
+        if (Math.cos(angle) > 0.1) textAnchor = "start";
+        else if (Math.cos(angle) < -0.1) textAnchor = "end";
+        
+        axisHtml += `<text x="${xLabel}" y="${yLabel + 3}" class="radar-axis-label" text-anchor="${textAnchor}">${axes[i].name} (${axes[i].val}%)</text>`;
+    }
+    
+    const areaPoints = [];
+    const pointsHtml = [];
+    for (let i = 0; i < 5; i++) {
+        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const valPct = axes[i].val / 100;
+        const rVal = R * valPct;
+        const x = cx + rVal * Math.cos(angle);
+        const y = cy + rVal * Math.sin(angle);
+        areaPoints.push(`${x},${y}`);
+        pointsHtml.push(`<circle cx="${x}" cy="${y}" r="4" class="radar-point" />`);
+    }
+    
+    return `
+        <svg width="100%" height="240px" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px;">
+            ${gridHtml}
+            ${axisHtml}
+            <polygon points="${areaPoints.join(' ')}" class="radar-area" />
+            ${pointsHtml.join('')}
+        </svg>
+    `;
+}
+
+function renderFallacyAudit() {
+    const container = document.getElementById('summary-audit-list');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    if (matchFallacyLog.length === 0) {
+        container.innerHTML = '<div class="audit-empty">// Ninguna falacia detectada en el oponente durante el encuentro.</div>';
+        return;
+    }
+    
+    matchFallacyLog.forEach(item => {
+        const div = document.createElement('div');
+        let outcomeClass = item.outcome;
+        let statusText = "";
+        
+        if (item.outcome === 'success') {
+            statusText = "🛡️ PARRY";
+        } else if (item.outcome === 'failed') {
+            statusText = "❌ FALLÓ";
+        } else if (item.outcome === 'timedout') {
+            statusText = "⏳ EXPIRÓ";
+        } else if (item.outcome === 'ignored') {
+            statusText = "👁️ IGNORÓ";
+        }
+        
+        div.className = `audit-item ${outcomeClass}`;
+        div.innerHTML = `
+            <div class="audit-status">${statusText}</div>
+            <div class="audit-details">
+                <span class="audit-fallacy">${item.fallacy}</span>
+                <span class="audit-turn">Turno ${item.turn} • Mitigó ${item.outcome === 'success' ? item.dmg : 0} HP</span>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
 function showBattleSummary(isWin) {
     const outcomeText = document.getElementById('summary-outcome-text');
     if (isWin) {
@@ -804,6 +920,42 @@ function showBattleSummary(isWin) {
     } else {
         summaryUnlocks.style.display = 'none';
     }
+
+    // Calcular métricas
+    let logicRigor = 100;
+    logicRigor -= Math.round(battleStats.playerDamageReceived * 0.5);
+    logicRigor += battleStats.successfulParries * 10;
+    logicRigor -= battleStats.failedParries * 15;
+    logicRigor = Math.max(10, Math.min(100, logicRigor));
+    
+    let basePersuasion = Math.min(100, Math.round((battleStats.playerDamageInflicted * 100) / Math.max(1, battleStats.turns * 18)));
+    if (isWin) basePersuasion = Math.min(100, basePersuasion + 15);
+    let persuasion = Math.max(15, Math.min(100, basePersuasion));
+    
+    let totalPotentialDamage = battleStats.playerDamageReceived + battleStats.mitigatedDamage;
+    let evasion = 50;
+    if (totalPotentialDamage > 0) {
+        evasion = Math.round((battleStats.mitigatedDamage / totalPotentialDamage) * 100);
+    }
+    evasion = Math.max(15, Math.min(100, evasion));
+    
+    let biasDetection = 100;
+    if (battleStats.totalFallacies > 0) {
+        biasDetection = Math.round((battleStats.successfulParries / battleStats.totalFallacies) * 100);
+    }
+    biasDetection = Math.max(10, Math.min(100, biasDetection));
+    
+    let rhetoric = 60;
+    if (battleStats.tacticCardsPlayed > 0) {
+        rhetoric = Math.round((battleStats.tacticCardsSuccessful / battleStats.tacticCardsPlayed) * 100);
+    }
+    rhetoric = Math.max(15, Math.min(100, rhetoric));
+
+    const radarContainer = document.getElementById('radar-chart-container');
+    if (radarContainer) {
+        radarContainer.innerHTML = generateRadarSVG({ logicRigor, persuasion, evasion, biasDetection, rhetoric });
+    }
+    renderFallacyAudit();
     
     showScreen('summary');
 }
@@ -1331,6 +1483,19 @@ function startBattleFlow() {
     playerHP = (gameRule === 'sudden_death') ? 1 : 100;
     aiHP = (gameRule === 'sudden_death') ? 1 : 100;
     
+    battleStats = {
+        turns: 0,
+        playerDamageReceived: 0,
+        playerDamageInflicted: 0,
+        mitigatedDamage: 0,
+        successfulParries: 0,
+        failedParries: 0,
+        totalFallacies: 0,
+        tacticCardsPlayed: 0,
+        tacticCardsSuccessful: 0
+    };
+    matchFallacyLog = [];
+    
     chatLog.innerHTML = '';
     playerHealthFill.style.width = '100%'; aiHealthFill.style.width = '100%';
     attackBtn.disabled = false; argumentInput.disabled = false; attackBtn.innerText = 'Atacar';
@@ -1654,6 +1819,7 @@ function startBlitzTimer() {
 
 // --- MOTOR DUAL ---
 async function attackAI(playerText) {
+    battleStats.turns++;
     isAiThinking = true; attackBtn.disabled = true; argumentInput.disabled = true;
     clearInterval(blitzTimer); 
     clearInterval(silencioTimer);
@@ -1668,10 +1834,12 @@ async function attackAI(playerText) {
     let currentUsedTactic = selectedTactic;
 
     if (currentUsedTactic) {
+        battleStats.tacticCardsPlayed++;
         const tactic = tacticsPool[currentUsedTactic];
         if (tactic) {
             const success = tactic.check(playerText);
             if (success) {
+                battleStats.tacticCardsSuccessful++;
                 addMessage('system', `[ TÁCTICA EXITOSA: ${tactic.name.toUpperCase()} ] ¡Condición cumplida!`);
                 if (currentUsedTactic === 'ockham') {
                     tacticBonusDamageMultiplier = 1.4;
@@ -1804,9 +1972,15 @@ async function attackAI(playerText) {
         }
 
         if (gameRule === 'sudden_death') {
-            if (finalDmgRecibido > 0) aiHP = 0;
+            if (finalDmgRecibido > 0) {
+                aiHP = 0;
+                battleStats.playerDamageInflicted += 100;
+            }
             if (result.daño_infligido > 0) playerHP = 0;
-        } else { aiHP -= finalDmgRecibido; }
+        } else { 
+            aiHP -= finalDmgRecibido; 
+            battleStats.playerDamageInflicted += finalDmgRecibido;
+        }
 
         addMessage('system', `[ HIT ] Daño causado: ${gameRule === 'sudden_death' && aiHP === 0 ? 'LETAL' : finalDmgRecibido}`, () => {
             if (finalDmgRecibido > 0) triggerSuccessFlash();
@@ -1840,7 +2014,16 @@ async function attackAI(playerText) {
                                 postAiAttackFlow(nextTurnSmokeScreen, nextTurnAbsurdumVulnerability);
                             });
                         } else {
-                            if (gameRule !== 'sudden_death') playerHP -= finalDmgInfligido;
+                            if (gameRule !== 'sudden_death') {
+                                playerHP -= finalDmgInfligido;
+                                battleStats.playerDamageReceived += finalDmgInfligido;
+                            } else {
+                                playerHP = 0;
+                                battleStats.playerDamageReceived += 100;
+                            }
+                            
+                            const mitigated = Math.max(0, result.daño_infligido - finalDmgInfligido);
+                            battleStats.mitigatedDamage += mitigated;
                             
                             addMessage('system', `[ HIT ] Daño recibido: ${gameRule === 'sudden_death' && playerHP === 0 ? 'LETAL' : finalDmgInfligido}`, () => {
                                 if (finalDmgInfligido > 0) triggerDamageFlash();
@@ -1915,6 +2098,11 @@ function resolveActiveParry(isSuccess, reason) {
         
         // Parry exitoso: 0 daño al jugador, 10 daño al oponente
         aiHP = Math.max(0, aiHP - 10);
+        battleStats.successfulParries++;
+        battleStats.mitigatedDamage += activeParryDamage;
+        battleStats.playerDamageInflicted += 10;
+        matchFallacyLog.push({ turn: battleStats.turns, fallacy: activeParryFalacia, dmg: activeParryDamage, outcome: 'success' });
+        
         activeParryBox.style.borderColor = 'rgba(34, 197, 94, 0.6)';
         activeParryBox.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.25)';
         activeParryBox.querySelector('.parry-prompt').innerHTML = `¡PARRY EXITOSO! Identificaste correctamente: "${activeParryFalacia}". Reflejas el ataque e infliges 10 de daño.`;
@@ -1936,9 +2124,19 @@ function resolveActiveParry(isSuccess, reason) {
         // Parry fallido: recibe daño completo
         if (gameRule !== 'sudden_death') {
             playerHP -= activeParryDamage;
+            battleStats.playerDamageReceived += activeParryDamage;
         } else {
             playerHP = 0; 
+            battleStats.playerDamageReceived += 100;
         }
+        
+        battleStats.failedParries++;
+        matchFallacyLog.push({ 
+            turn: battleStats.turns, 
+            fallacy: activeParryFalacia, 
+            dmg: activeParryDamage, 
+            outcome: reason === 'ignorar' ? 'ignored' : (reason === 'incorrecto' ? 'failed' : 'timedout') 
+        });
         
         activeParryBox.style.borderColor = 'rgba(239, 68, 68, 0.6)';
         activeParryBox.querySelector('.parry-prompt').innerText = reason === "incorrecto" 
@@ -1960,6 +2158,7 @@ function resolveActiveParry(isSuccess, reason) {
 }
 
 function triggerParryPhase(falaciaCorrecta, dañoPotencial, onComplete) {
+    battleStats.totalFallacies++;
     isAiThinking = true; 
     attackBtn.disabled = true;
     argumentInput.disabled = true;
