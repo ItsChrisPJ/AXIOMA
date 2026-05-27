@@ -1356,6 +1356,172 @@
                 padding: 12px !important;
             }
         }
+
+        /* ========================================== */
+        /* MAZO DIALÉCTICO & CARTAS DE TÁCTICA */
+        /* ========================================== */
+        .dialectical-deck {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            width: 100%;
+        }
+        .tactical-card {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-dim);
+            padding: 10px 12px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        .tactical-card:hover {
+            border-color: var(--border-mid);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+            background: rgba(30, 41, 59, 0.6);
+        }
+        .tactical-card.active-selected {
+            border-color: var(--accent-academico);
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.45), inset 0 0 6px rgba(34, 211, 238, 0.2);
+            background: rgba(12, 74, 110, 0.4);
+            transform: translateY(-4px);
+        }
+        .tactical-card .card-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-display);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--text-primary);
+        }
+        .tactical-card .card-condition {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+            flex-grow: 1;
+        }
+        .tactical-card .card-effect {
+            font-size: 0.62rem;
+            font-family: var(--font-mono);
+            color: #22d3ee; /* cyan-400 */
+            text-transform: uppercase;
+            border-top: 1px dashed var(--border-dim);
+            padding-top: 4px;
+            margin-top: 2px;
+        }
+
+        /* ========================================== */
+        /* WIDGET DE PARRY DE FALACIAS */
+        /* ========================================== */
+        .parry-box {
+            align-self: center;
+            background: rgba(30, 16, 16, 0.85);
+            border: 1px solid rgba(239, 68, 68, 0.6);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+            width: 100%;
+            max-width: 550px;
+            padding: 16px 20px;
+            border-radius: 6px;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 15px 0;
+            box-sizing: border-box;
+        }
+        .parry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-display);
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            font-weight: 700;
+            color: #ef4444; /* red-500 */
+        }
+        .parry-timer-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(239, 68, 68, 0.15);
+            overflow: hidden;
+            border-radius: 2px;
+        }
+        .parry-timer-fill {
+            height: 100%;
+            background: #f87171; /* red-400 */
+            width: 100%;
+            transition: width 1s linear;
+        }
+        .parry-prompt {
+            font-size: 0.78rem;
+            color: var(--text-primary);
+            line-height: 1.4;
+            font-family: var(--font-mono);
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px 10px;
+            border: 1px dashed rgba(239, 68, 68, 0.3);
+        }
+        .parry-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        @media (max-width: 500px) {
+            .parry-options {
+                grid-template-columns: 1fr;
+            }
+        }
+        .parry-btn {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5; /* red-300 */
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+            text-align: center;
+            border-radius: 4px;
+        }
+        .parry-btn:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: #ef4444;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        }
+        .parry-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .parry-btn.skip {
+            grid-column: span 2;
+            border-color: var(--border-dim);
+            color: var(--text-muted);
+        }
+        @media (max-width: 500px) {
+            .parry-btn.skip {
+                grid-column: span 1;
+            }
+        }
+        .parry-btn.skip:hover:not(:disabled) {
+            background: var(--bg-raised);
+            border-color: var(--border-mid);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -2016,6 +2182,9 @@
         </div>
 
         <div id="chat-log"></div>
+
+        <!-- Mazo Dialéctico para Tácticas -->
+        <div id="dialectical-deck" class="dialectical-deck"></div>
 
         <div class="controls">
             <textarea id="argument-input" placeholder="Escribe tu argumento..."></textarea>

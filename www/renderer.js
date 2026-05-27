@@ -112,6 +112,126 @@ const skillNodesDef = {
 let unlockedSkills = [];
 let selectedNodeId = null;
 
+// --- VARIABLES Y CONFIGURACIÓN DEL MAZO DIALÉCTICO ---
+const tacticsPool = {
+    ockham: {
+        id: 'ockham',
+        name: 'Navaja de Ockham',
+        desc: 'Escribe menos de 60 caracteres.',
+        effectDesc: 'Daño infligido +40%',
+        icon: '🪒',
+        check: (arg) => arg.length < 60
+    },
+    steelman: {
+        id: 'steelman',
+        name: 'Steelmanning',
+        desc: 'Empieza con: "Entiendo que", "Es cierto que" o "Comprendo".',
+        effectDesc: 'Cura 15 Credibilidad (HP)',
+        icon: '⛓️',
+        check: (arg) => {
+            const l = arg.toLowerCase().trim();
+            return l.startsWith('entiendo que') || l.startsWith('es cierto que') || l.startsWith('comprendo tu') || l.startsWith('comprendo que') || l.startsWith('comprendo');
+        }
+    },
+    evidence: {
+        id: 'evidence',
+        name: 'Evidencia Empírica',
+        desc: 'Incluye al menos una cifra o porcentaje.',
+        effectDesc: 'Daño +20% e ignora defensas',
+        icon: '📊',
+        check: (arg) => /\d+%?/.test(arg)
+    },
+    absurdum: {
+        id: 'absurdum',
+        name: 'Reductio',
+        desc: 'Termina el argumento con un signo de interrogación (?).',
+        effectDesc: 'Daño +15% y debilita al oponente',
+        icon: '🌀',
+        check: (arg) => arg.trim().endsWith('?')
+    },
+    smoke: {
+        id: 'smoke',
+        name: 'Cortina de Humo',
+        desc: 'Usa al menos 3 palabras de 10 o más letras.',
+        effectDesc: 'Daño recibido -50% el próximo turno',
+        icon: '🌫️',
+        check: (arg) => {
+            const words = arg.split(/\s+/).map(w => w.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")).filter(w => w.length >= 10);
+            return words.length >= 3;
+        }
+    }
+};
+
+let deckHand = [];
+let selectedTactic = null;
+let activeSmokeScreen = false;
+let activeAbsurdumVulnerability = false;
+
+function drawInitialDeckHand() {
+    deckHand = [];
+    selectedTactic = null;
+    const keys = Object.keys(tacticsPool);
+    while (deckHand.length < 3) {
+        const randKey = keys[Math.floor(Math.random() * keys.length)];
+        if (!deckHand.includes(randKey)) {
+            deckHand.push(randKey);
+        }
+    }
+    renderDeckHand();
+}
+
+function renderDeckHand() {
+    const deckContainer = document.getElementById('dialectical-deck');
+    if (!deckContainer) return;
+    deckContainer.innerHTML = '';
+    
+    deckHand.forEach(tacticId => {
+        const tactic = tacticsPool[tacticId];
+        if (!tactic) return;
+        
+        const card = document.createElement('div');
+        card.className = `tactical-card ${selectedTactic === tacticId ? 'active-selected' : ''}`;
+        card.dataset.tactic = tacticId;
+        card.innerHTML = `
+            <div class="card-header">
+                <span class="card-icon">${tactic.icon}</span>
+                <span class="card-title">${tactic.name}</span>
+            </div>
+            <div class="card-condition">${tactic.desc}</div>
+            <div class="card-effect">${tactic.effectDesc}</div>
+        `;
+        
+        card.addEventListener('click', () => {
+            if (isAiThinking || playerHP <= 0 || aiHP <= 0) return;
+            if (selectedTactic === tacticId) {
+                selectedTactic = null;
+            } else {
+                selectedTactic = tacticId;
+            }
+            playSound('click');
+            renderDeckHand();
+        });
+        
+        deckContainer.appendChild(card);
+    });
+}
+
+function replaceUsedCard(tacticId) {
+    const index = deckHand.indexOf(tacticId);
+    if (index > -1) {
+        const keys = Object.keys(tacticsPool);
+        let randKey = keys[Math.floor(Math.random() * keys.length)];
+        let attempts = 0;
+        while (deckHand.includes(randKey) && attempts < 10) {
+            randKey = keys[Math.floor(Math.random() * keys.length)];
+            attempts++;
+        }
+        deckHand[index] = randKey;
+    }
+    selectedTactic = null;
+    renderDeckHand();
+}
+
 
 
 
@@ -693,6 +813,7 @@ document.getElementById('btn-summary-restart').addEventListener('click', () => {
     clearInterval(blitzTimer);
     clearInterval(cooldownTimer);
     clearInterval(silencioTimer);
+    clearInterval(parryTimer);
     startBattleFlow();
 });
 
@@ -700,6 +821,7 @@ document.getElementById('btn-summary-menu').addEventListener('click', () => {
     clearInterval(blitzTimer);
     clearInterval(cooldownTimer);
     clearInterval(silencioTimer);
+    clearInterval(parryTimer);
     showScreen('menu');
 });
 
@@ -1123,7 +1245,17 @@ btnGotoProfile.addEventListener('click', () => {
 });
 document.getElementById('btn-goto-settings').addEventListener('click', () => showScreen('settings'));
 document.getElementById('btn-exit').addEventListener('click', () => window.close());
-document.querySelectorAll('.back-to-menu').forEach(btn => btn.addEventListener('click', () => { clearInterval(blitzTimer); clearInterval(cooldownTimer); clearInterval(silencioTimer); updateBgmTension(); showScreen('menu'); }));
+const backToMenuBtns = document.querySelectorAll('.back-to-menu');
+console.log("AXIOMA: Encontrados botones back-to-menu:", backToMenuBtns.length);
+backToMenuBtns.forEach(btn => btn.addEventListener('click', () => { 
+    console.log("AXIOMA: Click en back-to-menu");
+    clearInterval(blitzTimer); 
+    clearInterval(cooldownTimer); 
+    clearInterval(silencioTimer); 
+    clearInterval(parryTimer); 
+    updateBgmTension(); 
+    showScreen('menu'); 
+}));
 
 document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -1234,6 +1366,11 @@ function startBattleFlow() {
     
     unlockAchievement('ach_first_debate');
     
+    // Inicializar estados de tácticas y mano del mazo
+    activeSmokeScreen = false;
+    activeAbsurdumVulnerability = false;
+    drawInitialDeckHand();
+    
     showScreen('battle');
     
     let sysMsg = gameRule === 'sudden_death' ? "[ MUERTE SÚBITA ACTIVADA - Un golpe letal ]" : `[ ARENA ABIERTA ] Tesis: "${currentTopic}"`;
@@ -1263,14 +1400,18 @@ btnStartBattle.addEventListener('click', startBattleFlow);
 
 // --- PAUSA Y EVENTOS NUEVOS ---
 document.getElementById('btn-pause').addEventListener('click', () => { 
+    console.log("AXIOMA: Click en btn-pause");
     clearInterval(blitzTimer); 
     clearInterval(cooldownTimer); 
     clearInterval(silencioTimer);
+    clearInterval(parryTimer);
     pauseModal.classList.add('active'); 
 });
 document.getElementById('btn-resume').addEventListener('click', () => { 
     pauseModal.classList.remove('active'); 
-    if (gameRule === 'blitz' && playerHP > 0 && !isAiThinking) {
+    if (inParry) {
+        startParryTimer();
+    } else if (gameRule === 'blitz' && playerHP > 0 && !isAiThinking) {
         startBlitzTimer(); 
     } else if (gameRule === 'silencio' && playerHP > 0 && !isAiThinking) {
         startSilenceTimer();
@@ -1286,6 +1427,8 @@ document.getElementById('btn-restart').addEventListener('click', () => {
     clearInterval(blitzTimer);
     clearInterval(cooldownTimer);
     clearInterval(silencioTimer);
+    clearInterval(parryTimer);
+    inParry = false;
     startBattleFlow(); // Re-dispara la pelea con la misma tesis y el mismo jefe
 });
 
@@ -1293,6 +1436,8 @@ document.getElementById('btn-surrender').addEventListener('click', () => {
     clearInterval(blitzTimer); 
     clearInterval(cooldownTimer); 
     clearInterval(silencioTimer);
+    clearInterval(parryTimer);
+    inParry = false;
     pauseModal.classList.remove('active'); 
     updateBgmTension(); // Restablecer tensión
     showScreen('menu'); 
@@ -1470,6 +1615,8 @@ function updateHealth() {
     if (playerHP <= 0) {
         clearInterval(blitzTimer);
         clearInterval(silencioTimer);
+        clearInterval(parryTimer);
+        inParry = false;
         updateBgmTension(); // Reset tensión
         playSound('defeat');
         recordMatchResult(false);
@@ -1477,6 +1624,8 @@ function updateHealth() {
     } else if (aiHP <= 0 && (gameRule !== 'gauntlet' || gauntletIndex >= 2)) {
         clearInterval(blitzTimer);
         clearInterval(silencioTimer);
+        clearInterval(parryTimer);
+        inParry = false;
         updateBgmTension(); // Reset tensión
         playSound('victory');
         recordMatchResult(true);
@@ -1508,7 +1657,47 @@ async function attackAI(playerText) {
     isAiThinking = true; attackBtn.disabled = true; argumentInput.disabled = true;
     clearInterval(blitzTimer); 
     clearInterval(silencioTimer);
+    clearInterval(parryTimer);
     attackBtn.innerText = "Analizando...";
+
+    // Evaluar Táctica seleccionada
+    let tacticBonusDamageMultiplier = 1;
+    let tacticHealAmount = 0;
+    let nextTurnSmokeScreen = false;
+    let nextTurnAbsurdumVulnerability = false;
+    let currentUsedTactic = selectedTactic;
+
+    if (currentUsedTactic) {
+        const tactic = tacticsPool[currentUsedTactic];
+        if (tactic) {
+            const success = tactic.check(playerText);
+            if (success) {
+                addMessage('system', `[ TÁCTICA EXITOSA: ${tactic.name.toUpperCase()} ] ¡Condición cumplida!`);
+                if (currentUsedTactic === 'ockham') {
+                    tacticBonusDamageMultiplier = 1.4;
+                } else if (currentUsedTactic === 'steelman') {
+                    tacticHealAmount = 15;
+                } else if (currentUsedTactic === 'evidence') {
+                    tacticBonusDamageMultiplier = 1.2;
+                } else if (currentUsedTactic === 'absurdum') {
+                    tacticBonusDamageMultiplier = 1.15;
+                    nextTurnAbsurdumVulnerability = true;
+                } else if (currentUsedTactic === 'smoke') {
+                    nextTurnSmokeScreen = true;
+                }
+            } else {
+                addMessage('system', `[ TÁCTICA FALLIDA: ${tactic.name.toUpperCase()} ] No cumpliste la condición.`);
+            }
+        }
+        replaceUsedCard(currentUsedTactic);
+    } else {
+        renderDeckHand();
+    }
+
+    if (tacticHealAmount > 0) {
+        playerHP = Math.min(100, playerHP + tacticHealAmount);
+        updateHealth();
+    }
 
     // Evaluar Eco Mental
     let ecoDamage = 0;
@@ -1557,7 +1746,7 @@ async function attackAI(playerText) {
     if (gameRule === 'espejo') {
         promptText += "\nREGLA DE MODO ESPEJO: Debes copiar la postura y tesis del usuario, pero exagerándola al extremo o usándola como contraargumento en su contra. Reconvierte sus propios razonamientos y úsalos como si fueran tuyos para atacarle.";
     }
-    const finalSystemPrompt = `${promptText}\nReglas: Tema "${currentTopic}". Evalúa el argumento del usuario. Responde ÚNICAMENTE con un objeto JSON válido: {"daño_recibido": (1-30), "daño_infligido": (5-25), "respuesta_ia": "tu contraargumento"}`;
+    const finalSystemPrompt = `${promptText}\nReglas: Tema "${currentTopic}". Evalúa el argumento del usuario. Responde ÚNICAMENTE con un objeto JSON válido: {"daño_recibido": (1-30), "daño_infligido": (5-25), "respuesta_ia": "tu contraargumento", "falacia_cometida": "Ad Hominem" | "Hombre de Paja" | "Falsa Dicotomía" | "Ad Populum" | "Generalización Apresurada" | "Evadir la Cuestión" | "Ninguna"}`;
 
     try {
         let responseText = "";
@@ -1598,6 +1787,15 @@ async function attackAI(playerText) {
             finalDmgRecibido = Math.round(finalDmgRecibido * 1.15);
         }
 
+        // Aplicar multiplicador de táctica
+        finalDmgRecibido = Math.round(finalDmgRecibido * tacticBonusDamageMultiplier);
+
+        // Aplicar vulnerabilidad por Reductio si estaba activa
+        if (activeAbsurdumVulnerability) {
+            finalDmgRecibido = Math.round(finalDmgRecibido * 1.2);
+            activeAbsurdumVulnerability = false; // Consumida
+        }
+
         // Hombre de Hierro (log3)
         if (unlockedSkills.includes('log3') && finalDmgRecibido > 10) {
             const healAmt = 5;
@@ -1623,30 +1821,33 @@ async function attackAI(playerText) {
                             finalDmgInfligido = Math.round(finalDmgInfligido * 0.9);
                         }
                         
-                        if (gameRule !== 'sudden_death') playerHP -= finalDmgInfligido;
-                        
-                        addMessage('system', `[ HIT ] Daño recibido: ${gameRule === 'sudden_death' && playerHP === 0 ? 'LETAL' : finalDmgInfligido}`, () => {
-                            if (finalDmgInfligido > 0) triggerDamageFlash();
-                            updateHealth();
-                            
-                            if (playerHP > 0 && aiHP > 0) {
-                                if (gameRule === 'caos') {
-                                    const bossKeys = Object.keys(oponentes).filter(k => k !== 'normal');
-                                    const randomKey = bossKeys[Math.floor(Math.random() * bossKeys.length)];
-                                    selectedBoss = oponentes[randomKey];
-                                    aiNameLabel.innerText = `${selectedBoss.name} (Caos)`;
-                                    const aiHudAvatar = document.getElementById('hud-ai-avatar');
-                                    if (aiHudAvatar) {
-                                        aiHudAvatar.innerHTML = selectedBoss.avatar || '🤖';
-                                    }
-                                    addMessage('system', `[ RULETA DEL CAOS ] La personalidad cambia a: ${selectedBoss.name}`);
-                                }
+                        // Aplicar Cortina de Humo (smoke card) de la jugada anterior del jugador
+                        if (activeSmokeScreen) {
+                            finalDmgInfligido = Math.round(finalDmgInfligido * 0.5);
+                            activeSmokeScreen = false; // Consumida
+                        }
 
-                                if (gameRule === 'blitz') startBlitzTimer();
-                                else if (gameRule === 'silencio') startSilenceTimer();
-                                else { startPlayerCooldown(3); }
-                            }
-                        });
+                        // Emparejar y validar falacia cometida para Parry
+                        const validFalacias = ["Ad Hominem", "Hombre de Paja", "Falsa Dicotomía", "Ad Populum", "Generalización Apresurada", "Evadir la Cuestión"];
+                        let falaciaCorrecta = "Ninguna";
+                        if (result.falacia_cometida) {
+                            const found = validFalacias.find(f => f.toLowerCase() === result.falacia_cometida.toLowerCase());
+                            if (found) falaciaCorrecta = found;
+                        }
+
+                        if (falaciaCorrecta !== "Ninguna" && finalDmgInfligido > 0) {
+                            triggerParryPhase(falaciaCorrecta, finalDmgInfligido, () => {
+                                postAiAttackFlow(nextTurnSmokeScreen, nextTurnAbsurdumVulnerability);
+                            });
+                        } else {
+                            if (gameRule !== 'sudden_death') playerHP -= finalDmgInfligido;
+                            
+                            addMessage('system', `[ HIT ] Daño recibido: ${gameRule === 'sudden_death' && playerHP === 0 ? 'LETAL' : finalDmgInfligido}`, () => {
+                                if (finalDmgInfligido > 0) triggerDamageFlash();
+                                updateHealth();
+                                postAiAttackFlow(nextTurnSmokeScreen, nextTurnAbsurdumVulnerability);
+                            });
+                        }
                     });
                 }, 400);
             } else if (aiHP <= 0 && gameRule === 'gauntlet') {
@@ -1669,6 +1870,181 @@ async function attackAI(playerText) {
         addMessage('system', `[ ERROR ] ${error.message}`);
         attackBtn.disabled = false; argumentInput.disabled = false; attackBtn.innerText = 'Atacar';
     } finally { isAiThinking = false; }
+}
+
+let parryTimer = null;
+let inParry = false;
+let parryTimeRemaining = 7000;
+let activeParryFalacia = "";
+let activeParryDamage = 0;
+let activeParryOnComplete = null;
+let activeParryBox = null;
+
+function startParryTimer() {
+    clearInterval(parryTimer);
+    if (!activeParryBox) return;
+    const timerFill = activeParryBox.querySelector('#parry-timer-fill');
+    const countdownText = activeParryBox.querySelector('#parry-countdown-text');
+    const updateRate = 100;
+    
+    parryTimer = setInterval(() => {
+        parryTimeRemaining -= updateRate;
+        const pct = Math.max(0, (parryTimeRemaining / 7000) * 100);
+        if (timerFill) timerFill.style.width = `${pct}%`;
+        if (countdownText) countdownText.innerText = `${(parryTimeRemaining / 1000).toFixed(1)}s`;
+
+        if (parryTimeRemaining <= 0) {
+            clearInterval(parryTimer);
+            resolveActiveParry(false, "tiempo");
+        }
+    }, updateRate);
+}
+
+function resolveActiveParry(isSuccess, reason) {
+    inParry = false;
+    clearInterval(parryTimer);
+    
+    if (!activeParryBox) return;
+    
+    // Deshabilitar todos los botones
+    activeParryBox.querySelectorAll('.parry-btn').forEach(btn => btn.disabled = true);
+
+    if (isSuccess) {
+        playSound('success');
+        triggerSuccessFlash();
+        
+        // Parry exitoso: 0 daño al jugador, 10 daño al oponente
+        aiHP = Math.max(0, aiHP - 10);
+        activeParryBox.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+        activeParryBox.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.25)';
+        activeParryBox.querySelector('.parry-prompt').innerHTML = `¡PARRY EXITOSO! Identificaste correctamente: "${activeParryFalacia}". Reflejas el ataque e infliges 10 de daño.`;
+        
+        const currentBox = activeParryBox;
+        const onComplete = activeParryOnComplete;
+        setTimeout(() => {
+            currentBox.remove();
+            addMessage('system', `[ PARRY ] Anulaste el daño y contraatacaste con 10 de daño.`, () => {
+                updateHealth();
+                isAiThinking = false;
+                if (onComplete) onComplete();
+            });
+        }, 2000);
+    } else {
+        playSound('damage');
+        triggerDamageFlash();
+
+        // Parry fallido: recibe daño completo
+        if (gameRule !== 'sudden_death') {
+            playerHP -= activeParryDamage;
+        } else {
+            playerHP = 0; 
+        }
+        
+        activeParryBox.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+        activeParryBox.querySelector('.parry-prompt').innerText = reason === "incorrecto" 
+            ? `¡PARRY FALLIDO! Era "${activeParryFalacia}". Recibes el daño completo.`
+            : `¡PARRY FALLIDO! Se agotó el tiempo. Recibes el daño completo.`;
+
+        const currentBox = activeParryBox;
+        const onComplete = activeParryOnComplete;
+        const dmg = activeParryDamage;
+        setTimeout(() => {
+            currentBox.remove();
+            addMessage('system', `[ HIT ] Daño recibido: ${gameRule === 'sudden_death' && playerHP === 0 ? 'LETAL' : dmg}`, () => {
+                updateHealth();
+                isAiThinking = false;
+                if (onComplete) onComplete();
+            });
+        }, 2000);
+    }
+}
+
+function triggerParryPhase(falaciaCorrecta, dañoPotencial, onComplete) {
+    isAiThinking = true; 
+    attackBtn.disabled = true;
+    argumentInput.disabled = true;
+
+    // Pausar todos los timers de juego
+    clearInterval(blitzTimer);
+    clearInterval(silencioTimer);
+    clearInterval(cooldownTimer);
+    clearInterval(parryTimer);
+
+    playSound('warning');
+
+    const parryBox = document.createElement('div');
+    parryBox.className = 'parry-box';
+    
+    // Obtener dos falacias falsas aleatorias
+    const falaciasPool = ["Ad Hominem", "Hombre de Paja", "Falsa Dicotomía", "Ad Populum", "Generalización Apresurada", "Evadir la Cuestión"];
+    const falsas = falaciasPool.filter(f => f !== falaciaCorrecta).sort(() => 0.5 - Math.random()).slice(0, 2);
+    const opciones = [falaciaCorrecta, ...falsas].sort(() => 0.5 - Math.random());
+
+    parryBox.innerHTML = `
+        <div class="parry-header">
+            <span>🚨 DETECTOR DE FALACIAS ACTIVADO</span>
+            <span id="parry-countdown-text">7.0s</span>
+        </div>
+        <div class="parry-timer-container">
+            <div class="parry-timer-fill" id="parry-timer-fill" style="width: 100%;"></div>
+        </div>
+        <div class="parry-prompt">El detector de logos sospecha una falacia en la respuesta del oponente. Identifícala para realizar un PARRY.</div>
+        <div class="parry-options">
+            ${opciones.map(opt => `<button class="parry-btn" data-fallacy="${opt}">${opt}</button>`).join('')}
+            <button class="parry-btn skip">Ignorar (Recibir daño)</button>
+        </div>
+    `;
+
+    chatLog.appendChild(parryBox);
+    chatLog.scrollTop = chatLog.scrollHeight;
+
+    // Configurar estado de parry global
+    inParry = true;
+    parryTimeRemaining = 7000;
+    activeParryFalacia = falaciaCorrecta;
+    activeParryDamage = dañoPotencial;
+    activeParryOnComplete = onComplete;
+    activeParryBox = parryBox;
+
+    startParryTimer();
+
+    parryBox.querySelectorAll('.parry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!inParry) return;
+            const chosen = btn.dataset.fallacy;
+            if (btn.classList.contains('skip')) {
+                resolveActiveParry(false, "ignorar");
+            } else if (chosen === falaciaCorrecta) {
+                resolveActiveParry(true, "correcto");
+            } else {
+                resolveActiveParry(false, "incorrecto");
+            }
+        });
+    });
+}
+
+function postAiAttackFlow(nextTurnSmokeScreen, nextTurnAbsurdumVulnerability) {
+    if (nextTurnSmokeScreen) activeSmokeScreen = true;
+    if (nextTurnAbsurdumVulnerability) activeAbsurdumVulnerability = true;
+
+    if (playerHP > 0 && aiHP > 0) {
+        if (gameRule === 'caos') {
+            const bossKeys = Object.keys(oponentes).filter(k => k !== 'normal');
+            const randomKey = bossKeys[Math.floor(Math.random() * bossKeys.length)];
+            selectedBoss = oponentes[randomKey];
+            aiNameLabel.innerText = `${selectedBoss.name} (Caos)`;
+            const aiHudAvatar = document.getElementById('hud-ai-avatar');
+            if (aiHudAvatar) {
+                aiHudAvatar.innerHTML = selectedBoss.avatar || '🤖';
+            }
+            addMessage('system', `[ RULETA DEL CAOS ] La personalidad cambia a: ${selectedBoss.name}`);
+        }
+
+        renderDeckHand();
+        if (gameRule === 'blitz') startBlitzTimer();
+        else if (gameRule === 'silencio') startSilenceTimer();
+        else { startPlayerCooldown(3); }
+    }
 }
 
 attackBtn.addEventListener('click', () => {
