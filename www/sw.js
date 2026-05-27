@@ -1,4 +1,4 @@
-const CACHE_NAME = 'axioma-v1';
+const CACHE_NAME = 'axioma-v2';
 const ASSETS = [
   './',
   './index.html',
